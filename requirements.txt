@@ -1,2 +1,5 @@
-SimpleITK
+SimpleITK~=2.1.1.2
 tk
+
+future~=0.18.2
+Pillow~=8.1.2

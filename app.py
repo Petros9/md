@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, Text
 import os
-
-
+from PIL import ImageTk, Image
+import registration
 
 def run_app():
     imgs = ["None", "None"]
@@ -13,9 +13,13 @@ def run_app():
         file_name = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
         print(file_name)
         imgs[idx] = file_name
+        #img = ImageTk.PhotoImage(Image.open(file_name))
+        #label = tk.Label(frame, image=img)
+        #label.pack()
 
-        label = tk.Label(frame, text=imgs[idx])
-        label.pack()
+    def run_registration():
+        registration.register(imgs[0], imgs[1])
+
 
 
     canvas = tk.Canvas(root, height=700, width=700, bg="#263D42")
@@ -37,6 +41,12 @@ def run_app():
 
     choose_fixed_image_button.pack()
     choose_moving_image_button.pack()
+
+
+    run_button = tk.Button(root, text="Moving image", padx=10, pady=5, fg="white",
+                                           bg="#263D42", command=run_registration)
+
+    run_button.pack()
 
     root.mainloop()
 

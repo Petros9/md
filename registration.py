@@ -1,6 +1,6 @@
 
 import SimpleITK as sitk
-def save_combined_central_slice(fixed, moving, transform, file_name_prefix):
+def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method):
     global iteration_number
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
@@ -39,43 +39,45 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix):
                     file_name_prefix + format(iteration_number, '03d') + '.jpg')
     iteration_number += 1
 
+def register(fixed_image_name, moving_image_name):
 
-# read the images
-fixed_image = sitk.ReadImage("data/nativeFixed.mhd", sitk.sitkFloat32)
-moving_image = sitk.ReadImage("data/tetniceMoving1.mhd", sitk.sitkFloat32)
+    # read the images
+    fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
+    moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
 
-transform = sitk.CenteredTransformInitializer(fixed_image,
+    transform = sitk.CenteredTransformInitializer(fixed_image,
                                                       moving_image,
                                                       sitk.Euler3DTransform(),
                                                       sitk.CenteredTransformInitializerFilter.MOMENTS)
 
-# multi-resolution rigid registration using Mutual Information
-registration_method = sitk.ImageRegistrationMethod()
-registration_method.SetMetricAsMattesMutualInformation()
-registration_method.SetMetricSamplingStrategy(registration_method.REGULAR)
-registration_method.SetMetricSamplingPercentage(1)
-registration_method.SetInterpolator(sitk.sitkBSplineResampler)
-'''registration_method.SetOptimizerAsGradientDescent(learningRate=0.008,
+    # multi-resolution rigid registration using Mutual Information
+    registration_method = sitk.ImageRegistrationMethod()
+    registration_method.SetMetricAsMattesMutualInformation()
+    registration_method.SetMetricSamplingStrategy(registration_method.REGULAR)
+    registration_method.SetMetricSamplingPercentage(1)
+    registration_method.SetInterpolator(sitk.sitkBSplineResampler)
+    '''registration_method.SetOptimizerAsGradientDescent(learningRate=0.008,
                                                   numberOfIterations=100,
                                                   convergenceMinimumValue=1e-6,
                                                   convergenceWindowSize=20)'''
-registration_method.SetOptimizerAsLBFGSB(
+    registration_method.SetOptimizerAsLBFGSB(
                                                   numberOfIterations=100)
-registration_method.SetInitialTransform(transform)
+    registration_method.SetInitialTransform(transform)
 
-# add iteration callback, save central slice in xy, xz, yz planes
-global iteration_number
-iteration_number = 0
-registration_method.AddCommand(sitk.sitkIterationEvent,
+    # add iteration callback, save central slice in xy, xz, yz planes
+    global iteration_number
+    iteration_number = 0
+    registration_method.AddCommand(sitk.sitkIterationEvent,
                                lambda: save_combined_central_slice(fixed_image,
                                                                    moving_image,
                                                                    transform,
-                                                                   'output/iteration'))
+                                                                   'output/iteration', moving_image, registration_method))
 
-print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
-final_transform = registration_method.Execute(fixed_image, moving_image)
+    print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
+    final_transform = registration_method.Execute(fixed_image, moving_image)
 
-print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
-print("Metric value after  registration: ", registration_method.GetMetricValue())
+    print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
+    print("Metric value after  registration: ", registration_method.GetMetricValue())
 
-sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
+    sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
+
