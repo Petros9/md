@@ -3,22 +3,30 @@ from tkinter import filedialog, Text
 import os
 from PIL import ImageTk, Image
 import registration
+import SimpleITK as sitk
 
 def run_app():
     imgs = ["None", "None"]
 
     root = tk.Tk()
 
-    def add_image(idx, frame):
+    def add_fixed():
         file_name = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
-        print(file_name)
-        imgs[idx] = file_name
-        #img = ImageTk.PhotoImage(Image.open(file_name))
-        #label = tk.Label(frame, image=img)
-        #label.pack()
+        imgs[0] = file_name
+        label = tk.Label(fixed_frame, text='Label is set')
+        label.pack()
+
+    def add_moving():
+        imgs[1] = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
+        label = tk.Label(moving_frame, text='Label is set')
+        label.pack()
+
 
     def run_registration():
-        registration.register(imgs[0], imgs[1])
+        image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/data/iteration000.jpg"))
+        label = tk.Label(result_frame, image=image)
+        label.pack()
+        registration.register(imgs[0], imgs[1], label)
 
 
 
@@ -33,17 +41,20 @@ def run_app():
     moving_frame = tk.Frame(root, bg="white")
     moving_frame.place(relwidth=0.5, relheight=0.5, relx=0.5, rely=0)
 
+    result_frame = tk.Frame(root, bg='black')
+    result_frame.place(relheight=0.375, relwidth=0.5, relx=0.25, rely=0.5)
+
     choose_fixed_image_button = tk.Button(root, text="Fixed image", padx=10, pady=5, fg="white",
-                                          bg="#263D42", command=add_image(0, fixed_frame))
+                                          bg="#263D42", command=add_fixed)
 
     choose_moving_image_button = tk.Button(root, text="Moving image", padx=10, pady=5, fg="white",
-                                           bg="#263D42", command=add_image(1, moving_frame))
+                                           bg="#263D42", command=add_moving)
 
     choose_fixed_image_button.pack()
     choose_moving_image_button.pack()
 
 
-    run_button = tk.Button(root, text="Moving image", padx=10, pady=5, fg="white",
+    run_button = tk.Button(root, text="Run simple registration", padx=10, pady=5, fg="white",
                                            bg="#263D42", command=run_registration)
 
     run_button.pack()

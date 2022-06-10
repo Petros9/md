@@ -1,6 +1,8 @@
-
 import SimpleITK as sitk
-def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method):
+import tk
+from PIL import ImageTk, Image
+
+def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, label):
     global iteration_number
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
@@ -18,7 +20,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     # resample the alpha blended images to be isotropic and rescale intensity
     # values so that they are in [0,255], this satisfies the requirements
     # of the jpg format
-    print(iteration_number, ": ", registration_method.GetMetricValue());
+    print(iteration_number, ": ", registration_method.GetMetricValue())
     combined_isotropic = []
     for img in combined:
         original_spacing = img.GetSpacing()
@@ -37,18 +39,21 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     # name prefix and the iteration number
     sitk.WriteImage(sitk.Tile(combined_isotropic, (1, 3)),
                     file_name_prefix + format(iteration_number, '03d') + '.jpg')
+    next_image_number = format(iteration_number, '03d')
+    image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/output/iteration{0}.jpg".format(next_image_number)))
+    label.configure(image=image)
     iteration_number += 1
 
-def register(fixed_image_name, moving_image_name):
 
+def register(fixed_image_name, moving_image_name, label):
     # read the images
     fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
     moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
 
     transform = sitk.CenteredTransformInitializer(fixed_image,
-                                                      moving_image,
-                                                      sitk.Euler3DTransform(),
-                                                      sitk.CenteredTransformInitializerFilter.MOMENTS)
+                                                  moving_image,
+                                                  sitk.Euler3DTransform(),
+                                                  sitk.CenteredTransformInitializerFilter.MOMENTS)
 
     # multi-resolution rigid registration using Mutual Information
     registration_method = sitk.ImageRegistrationMethod()
@@ -61,17 +66,18 @@ def register(fixed_image_name, moving_image_name):
                                                   convergenceMinimumValue=1e-6,
                                                   convergenceWindowSize=20)'''
     registration_method.SetOptimizerAsLBFGSB(
-                                                  numberOfIterations=100)
+        numberOfIterations=100)
     registration_method.SetInitialTransform(transform)
 
     # add iteration callback, save central slice in xy, xz, yz planes
     global iteration_number
     iteration_number = 0
     registration_method.AddCommand(sitk.sitkIterationEvent,
-                               lambda: save_combined_central_slice(fixed_image,
-                                                                   moving_image,
-                                                                   transform,
-                                                                   'output/iteration', moving_image, registration_method))
+                                   lambda: save_combined_central_slice(fixed_image,
+                                                                       moving_image,
+                                                                       transform,
+                                                                       'output/iteration', moving_image,
+                                                                       registration_method, label))
 
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
     final_transform = registration_method.Execute(fixed_image, moving_image)
@@ -80,4 +86,3 @@ def register(fixed_image_name, moving_image_name):
     print("Metric value after  registration: ", registration_method.GetMetricValue())
 
     sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
-
