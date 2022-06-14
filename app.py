@@ -1,34 +1,48 @@
 import tkinter as tk
 from tkinter import filedialog, Text
-import os
-from PIL import ImageTk, Image
 import registration
+import io
+from PIL import ImageTk, Image
 import SimpleITK as sitk
+import matplotlib.pylab as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+
+FIX_IDX = 0
+
+MOV_IDX = 0
+def create_working_img(file_name, frame, IDX):
+
+    itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
+    image_array = sitk.GetArrayViewFromImage(itk_image)
+
+    fig = plt.figure(figsize=(5, 4))
+    plt.imshow(image_array[IDX], cmap='Greys_r')
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+
 
 def run_app():
-    imgs = ["None", "None"]
+    images = ["None", "None"]
 
     root = tk.Tk()
 
-    def add_fixed():
+    def add_image(idx, frame, IDX):
         file_name = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
-        imgs[0] = file_name
-        label = tk.Label(fixed_frame, text='Label is set')
-        label.pack()
+        images[idx] = file_name
+        create_working_img(file_name, frame, IDX)
 
-    def add_moving():
-        imgs[1] = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
-        label = tk.Label(moving_frame, text='Label is set')
-        label.pack()
-
+        #myscrollbar = tk.Scrollbar(frame, orient="vertical")
+        #myscrollbar.pack(side="right", fill="y")
+        #label.pack()
 
     def run_registration():
-        image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/data/iteration000.jpg"))
+        image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/output/iteration000.jpg"))
         label = tk.Label(result_frame, image=image)
         label.pack()
-        registration.register(imgs[0], imgs[1], label)
-
-
+        registration.register(images[0], images[1], label)
 
     canvas = tk.Canvas(root, height=700, width=700, bg="#263D42")
     canvas.pack()
@@ -45,17 +59,16 @@ def run_app():
     result_frame.place(relheight=0.375, relwidth=0.5, relx=0.25, rely=0.5)
 
     choose_fixed_image_button = tk.Button(root, text="Fixed image", padx=10, pady=5, fg="white",
-                                          bg="#263D42", command=add_fixed)
+                                          bg="#263D42", command=lambda: add_image(0, fixed_frame, FIX_IDX))
 
     choose_moving_image_button = tk.Button(root, text="Moving image", padx=10, pady=5, fg="white",
-                                           bg="#263D42", command=add_moving)
+                                           bg="#263D42", command=lambda: add_image(1, moving_frame, MOV_IDX))
 
     choose_fixed_image_button.pack()
     choose_moving_image_button.pack()
 
-
     run_button = tk.Button(root, text="Run simple registration", padx=10, pady=5, fg="white",
-                                           bg="#263D42", command=run_registration)
+                           bg="#263D42", command=run_registration)
 
     run_button.pack()
 
