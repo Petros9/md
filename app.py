@@ -7,6 +7,8 @@ import SimpleITK as sitk
 import matplotlib.pylab as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import os
+
 
 
 FIX_IDX = 0
@@ -17,6 +19,7 @@ def create_working_img(file_name, frame, IDX):
     itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
     image_array = sitk.GetArrayViewFromImage(itk_image)
 
+    print(len(image_array))
     fig = plt.figure(figsize=(5, 4))
     plt.imshow(image_array[IDX], cmap='Greys_r')
     canvas = FigureCanvasTkAgg(fig, master=frame)
@@ -29,17 +32,22 @@ def run_app():
 
     root = tk.Tk()
 
+
     def add_image(idx, frame, IDX):
-        file_name = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
+        file_name = filedialog.askopenfilename(initialdir=os.path.abspath(os.getcwd())+'\\data', title="Select Image")
         images[idx] = file_name
         create_working_img(file_name, frame, IDX)
 
         #myscrollbar = tk.Scrollbar(frame, orient="vertical")
         #myscrollbar.pack(side="right", fill="y")
         #label.pack()
+        slider_fix = tk.Scale(root, from_=0, to=270, orient='horizontal', command = slider_changed )
+    # slider_mov = tk.Scale(root, from_=0, to=270, orient='horizontal', command = slider_changed )
+
+        slider_fix.pack()   
 
     def run_registration():
-        image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/output/iteration000.jpg"))
+        image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
         label = tk.Label(result_frame, image=image)
         label.pack()
         registration.register(images[0], images[1], label)
@@ -71,6 +79,18 @@ def run_app():
                            bg="#263D42", command=run_registration)
 
     run_button.pack()
+
+    # Sliders
+    def slider_changed(event):  
+        FIX_IDX  = slider_fix.get()
+        # MOV_IDX  = slider_mov.get()
+
+    slider_fix = tk.Scale(root, from_=0, to=270, orient='horizontal', command = slider_changed )
+    slider_mov = tk.Scale(root, from_=0, to=270, orient='horizontal', command = slider_changed )
+
+    slider_fix.pack()
+    slider_mov.pack()
+
 
     root.mainloop()
 

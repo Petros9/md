@@ -1,3 +1,4 @@
+import os
 import SimpleITK as sitk
 import tk
 from PIL import ImageTk, Image
@@ -40,7 +41,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     sitk.WriteImage(sitk.Tile(combined_isotropic, (1, 3)),
                     file_name_prefix + format(iteration_number, '03d') + '.jpg')
     next_image_number = format(iteration_number, '03d')
-    image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/output/iteration{0}.jpg".format(next_image_number)))
+    image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(next_image_number)))
     label.configure(image=image)
     iteration_number += 1
 
