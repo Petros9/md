@@ -41,11 +41,6 @@ def run_app():
         #myscrollbar = tk.Scrollbar(frame, orient="vertical")
         #myscrollbar.pack(side="right", fill="y")
         #label.pack()
-        slider_fix = tk.Scale(root, from_=0, to=270, orient='horizontal', command = slider_changed )
-    # slider_mov = tk.Scale(root, from_=0, to=270, orient='horizontal', command = slider_changed )
-
-        slider_fix.pack()   
-
     def run_registration():
         image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
         label = tk.Label(result_frame, image=image)
