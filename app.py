@@ -1,12 +1,10 @@
 import tkinter as tk
 from tkinter import filedialog, Text
 import registration
-import io
 from PIL import ImageTk, Image
 import SimpleITK as sitk
 import matplotlib.pylab as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 
 FIX_IDX = 0
 
@@ -18,28 +16,34 @@ def run_app():
 
     root = tk.Tk()
 
+
     def create_working_img(file_name, frame):
         itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
         image_array = sitk.GetArrayViewFromImage(itk_image)
 
         def update_image(IDX):
-            fig = plt.figure(figsize=(5, 4))
-            plt.imshow(image_array[int(IDX)], cmap='Greys_r')
-            canvas = FigureCanvasTkAgg(fig, master=frame)
-            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+            for widget in frame.winfo_children():
+                widget.destroy()
 
-        scale = tk.Scale(frame, from_=1, to=len(image_array), orient='horizontal', command=update_image)
-        scale.pack()
+            itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
+            image_array = sitk.GetArrayViewFromImage(itk_image)
+            fig = plt.figure(figsize=(5, 4))
+            print(IDX)
+            plt.imshow(image_array[int(IDX)], cmap='Greys_r')
+            canvas_figure = FigureCanvasTkAgg(fig, master=frame)
+            canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
         update_image(0)
+
+
+        scale = tk.Scale(root, from_=0, to=len(image_array) - 1, orient='horizontal',
+                         command=update_image)
+        scale.pack()
 
     def add_image(idx, frame):
         file_name = filedialog.askopenfilename(initialdir='/home/piotr/Downloads/md/data', title="Select Image")
         images[idx] = file_name
         create_working_img(file_name, frame)
-
-        # myscrollbar = tk.Scrollbar(frame, orient="vertical")
-        # myscrollbar.pack(side="right", fill="y")
-        # label.pack()
 
     def run_registration():
         image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/output/iteration000.jpg"))
