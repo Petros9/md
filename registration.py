@@ -4,12 +4,46 @@ import tk
 from PIL import ImageTk, Image
 from threading import Thread
 
+
+
+interpolation_options = [
+    "sitkLinear",
+    "sitkNearestNeighbor",
+    "sitkBSpline",
+    "sitkGaussian",
+    "sitkHammingWindowedSinc",
+    "sitkCosineWindowedSinc",
+    "sitkWelchWindowedSinc",
+    "sitkLanczosWindowedSinc",
+    "sitkBlackmanWindowedSinc",
+]
+
+# class Registration:
+#     def __init__(self) -> None:
+#         pass
+
+def parse_interpolation(method):
+    switch={
+    "sitkLinear": sitk.sitkLinear,
+    "sitkNearestNeighbor": sitk.sitkNearestNeighbor,
+    "sitkBSpline": sitk.sitkBSpline,
+    "sitkGaussian": sitk.sitkGaussian,
+    "sitkHammingWindowedSinc":sitk.sitkHammingWindowedSinc,
+    "sitkCosineWindowedSinc": sitk.sitkCosineWindowedSinc,
+    "sitkWelchWindowedSinc": sitk.sitkWelchWindowedSinc,
+    "sitkLanczosWindowedSinc": sitk.sitkLanczosWindowedSinc,
+    "sitkBlackmanWindowedSinc": sitk.sitkBlackmanWindowedSinc,
+      }
+
+    return switch.get(method)
+
+
 def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
     global iteration_number
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
     moving_transformed = sitk.Resample(moving, fixed, transform,
-                                       sitk.sitkLinear, 0.0,
+                                       sitk.sitkLinear, 0.0, # czy tu ma byc ta sama interpolacja co w registration() ??????
                                        moving_image.GetPixelIDValue())
     # extract the central slice in xy, xz, yz and alpha blend them
     combined = [fixed[:, :, central_indexes[2]] + -
@@ -49,8 +83,16 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     iteration_number += 1
 
 
-def register(fixed_image_name, moving_image_name, gui):
-    # read the images
+# function which runs whole registration in thread (gui was freezing)
+def register(fixed_image_name, moving_image_name, gui, interpolation_method): 
+    new_thread = Thread(target=registration_computation,
+                        args=(fixed_image_name, moving_image_name, gui, interpolation_method))
+    final_transform = new_thread.start()
+   
+
+
+def registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method):
+      # read the images
     fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
     moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
 
@@ -64,7 +106,7 @@ def register(fixed_image_name, moving_image_name, gui):
     registration_method.SetMetricAsMattesMutualInformation()
     registration_method.SetMetricSamplingStrategy(registration_method.REGULAR)
     registration_method.SetMetricSamplingPercentage(0.01)
-    registration_method.SetInterpolator(sitk.sitkBSplineResampler)
+    registration_method.SetInterpolator(parse_interpolation(interpolation_method))
     # registration_method.SetOptimizerAsGradientDescent(learningRate=0.008,
     #                                               numberOfIterations=100,
     #                                               convergenceMinimumValue=1e-6,
@@ -82,16 +124,12 @@ def register(fixed_image_name, moving_image_name, gui):
                                                                        transform,
                                                                        'output/iteration', moving_image,
                                                                        registration_method, gui))
-
+    
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
-
-    new_thread = Thread(target=registration_method.Execute,
-                        args=(fixed_image, moving_image))
-    # final_transform = registration_method.Execute(fixed_image, moving_image)
-    final_transform = new_thread.start()
-    # new_thread.join()
+    final_transform = registration_method.Execute(fixed_image, moving_image)
 
     # print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
     # sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
+

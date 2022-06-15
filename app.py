@@ -21,7 +21,7 @@ class App():
         self.root = tk.Tk()
         self.metric = tk.StringVar()#(self.root, value='run registration to see results')
         self.metric.set('run registration to see results')
-        
+        self.interpolation = tk.StringVar(value=registration.interpolation_options[0])
         self.build_gui()
 
 
@@ -35,7 +35,7 @@ class App():
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
         self.result_label = tk.Label(self.result_frame)
         self.result_label.pack()
-        registration.register(self.images[0], self.images[1], self)
+        registration.register(self.images[0], self.images[1], self, self.interpolation.get())
 
     def update_result_image(self, number):
         self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(number)))
@@ -82,7 +82,7 @@ class App():
         self.right_frame.pack(fill=BOTH, side=RIGHT, pady=(40, 5))
 
 
-        canvas = tk.Canvas(self.left_frame, height=700, width=700, bg="#263D42")
+        canvas = tk.Canvas(self.left_frame, height=900, width=700, bg="#263D42")
         canvas.pack()
 
         # Fixed frame
@@ -110,6 +110,16 @@ class App():
         choose_fixed_image_button.pack(side=LEFT, pady=5, padx=20)
         choose_moving_image_button.pack(pady=5)
 
+        # interpolation method dropdown
+        interpolation_frame = tk.Frame(self.right_frame)
+        interpolation_frame.pack(fill=X)
+        interpolation_lbl = tk.Label(interpolation_frame, text="Interpolation method: ", width=20)
+        interpolation_lbl.pack(side=LEFT, padx=3, pady=5)
+
+        drop = tk.OptionMenu(interpolation_frame, self.interpolation , *registration.interpolation_options)
+        drop.pack(pady=5)
+
+
         # registration button
         run_button = tk.Button(self.right_frame, text="Run simple registration", padx=10, pady=5, fg="white",
                             bg="#263D42", command=self.run_registration)
@@ -130,7 +140,6 @@ class App():
 
     def set_metric(self, value):
         self.metric.set(value)
-
 
 
         # def create_working_img(self, file_name, frame):
