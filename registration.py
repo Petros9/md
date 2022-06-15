@@ -1,8 +1,10 @@
+import os
 import SimpleITK as sitk
 import tk
 from PIL import ImageTk, Image
+from threading import Thread
 
-def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, label):
+def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
     global iteration_number
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
@@ -21,6 +23,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     # values so that they are in [0,255], this satisfies the requirements
     # of the jpg format
     print(iteration_number, ": ", registration_method.GetMetricValue())
+    gui.set_metric(registration_method.GetMetricValue())
     combined_isotropic = []
     for img in combined:
         original_spacing = img.GetSpacing()
@@ -40,12 +43,13 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     sitk.WriteImage(sitk.Tile(combined_isotropic, (1, 3)),
                     file_name_prefix + format(iteration_number, '03d') + '.jpg')
     next_image_number = format(iteration_number, '03d')
-    image = ImageTk.PhotoImage(Image.open("/home/piotr/Downloads/md/output/iteration{0}.jpg".format(next_image_number)))
-    label.configure(image=image)
+    # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(next_image_number)))
+    # label.configure(image=image)
+    gui.update_result_image(next_image_number)
     iteration_number += 1
 
 
-def register(fixed_image_name, moving_image_name, label):
+def register(fixed_image_name, moving_image_name, gui):
     # read the images
     fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
     moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
@@ -59,12 +63,12 @@ def register(fixed_image_name, moving_image_name, label):
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetMetricAsMattesMutualInformation()
     registration_method.SetMetricSamplingStrategy(registration_method.REGULAR)
-    registration_method.SetMetricSamplingPercentage(1)
+    registration_method.SetMetricSamplingPercentage(0.01)
     registration_method.SetInterpolator(sitk.sitkBSplineResampler)
-    '''registration_method.SetOptimizerAsGradientDescent(learningRate=0.008,
-                                                  numberOfIterations=100,
-                                                  convergenceMinimumValue=1e-6,
-                                                  convergenceWindowSize=20)'''
+    # registration_method.SetOptimizerAsGradientDescent(learningRate=0.008,
+    #                                               numberOfIterations=100,
+    #                                               convergenceMinimumValue=1e-6,
+    #                                               convergenceWindowSize=20)
     registration_method.SetOptimizerAsLBFGSB(
         numberOfIterations=100)
     registration_method.SetInitialTransform(transform)
@@ -77,12 +81,17 @@ def register(fixed_image_name, moving_image_name, label):
                                                                        moving_image,
                                                                        transform,
                                                                        'output/iteration', moving_image,
-                                                                       registration_method, label))
+                                                                       registration_method, gui))
 
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
-    final_transform = registration_method.Execute(fixed_image, moving_image)
 
-    print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
-    print("Metric value after  registration: ", registration_method.GetMetricValue())
+    new_thread = Thread(target=registration_method.Execute,
+                        args=(fixed_image, moving_image))
+    # final_transform = registration_method.Execute(fixed_image, moving_image)
+    final_transform = new_thread.start()
+    # new_thread.join()
 
-    sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
+    # print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
+    # print("Metric value after  registration: ", registration_method.GetMetricValue())
+
+    # sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
