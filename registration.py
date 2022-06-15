@@ -18,9 +18,21 @@ interpolation_options = [
     "sitkBlackmanWindowedSinc",
 ]
 
-# class Registration:
-#     def __init__(self) -> None:
-#         pass
+sampling_strategies = [
+    "RANDOM",
+    "REGULAR",
+    "NONE"
+]
+
+optimizers = [
+    "GradientDescent",
+    "GradientDescentLineSearch",
+    "RegularStepGradientDescent",
+    "ConjugateGradientLineSearch",
+    "LBFGSB"
+]
+
+
 
 def parse_interpolation(method):
     switch={
@@ -36,6 +48,16 @@ def parse_interpolation(method):
       }
 
     return switch.get(method)
+
+def parse_strategies(method, registration_method):
+    switch={
+    "RANDOM": registration_method.RANDOM,
+    "REGULAR": registration_method.REGULAR,
+    "NONE":registration_method.NONE
+    }
+
+    return switch.get(method)
+
 
 
 def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
@@ -84,14 +106,19 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
 
 
 # function which runs whole registration in thread (gui was freezing)
-def register(fixed_image_name, moving_image_name, gui, interpolation_method): 
-    new_thread = Thread(target=registration_computation,
-                        args=(fixed_image_name, moving_image_name, gui, interpolation_method))
+def register(fixed_image_name, moving_image_name, gui, interpolation_method, sampling_percent, 
+            sampling_strategy, bins, optimalizer, opt_data): 
+    print(float(sampling_percent))
+
+    new_thread = Thread(target=registration_computation, daemon=True,
+                        args=(fixed_image_name, moving_image_name, gui, interpolation_method,sampling_percent,
+                        sampling_strategy, bins, optimalizer, opt_data))
     final_transform = new_thread.start()
    
 
 
-def registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method):
+def registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method, 
+                            sampling_percent, sampling_strategy, bins, optimalizer, opt_data):
       # read the images
     fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
     moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
@@ -103,16 +130,36 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     # multi-resolution rigid registration using Mutual Information
     registration_method = sitk.ImageRegistrationMethod()
-    registration_method.SetMetricAsMattesMutualInformation()
-    registration_method.SetMetricSamplingStrategy(registration_method.REGULAR)
-    registration_method.SetMetricSamplingPercentage(0.01)
+    registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=bins)
+    registration_method.SetMetricSamplingStrategy(parse_strategies(sampling_strategy, registration_method))
+    registration_method.SetMetricSamplingPercentage(float(sampling_percent))
     registration_method.SetInterpolator(parse_interpolation(interpolation_method))
-    # registration_method.SetOptimizerAsGradientDescent(learningRate=0.008,
-    #                                               numberOfIterations=100,
-    #                                               convergenceMinimumValue=1e-6,
-    #                                               convergenceWindowSize=20)
-    registration_method.SetOptimizerAsLBFGSB(
-        numberOfIterations=100)
+
+    if optimalizer == 'GradientDescent':
+        registration_method.SetOptimizerAsGradientDescent(learningRate=float(getattr(opt_data, 'learningRate').get()),
+                                                    numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
+                                                    convergenceMinimumValue=float(getattr(opt_data, 'convergenceMinimumValue').get()),
+                                                    convergenceWindowSize=int(getattr(opt_data, 'convergenceWindowSize').get()))
+    elif optimalizer =='GradientDescentLineSearch':
+        registration_method.SetOptimizerAsGradientDescentLineSearch(learningRate=float(getattr(opt_data, 'learningRate').get()),
+                                                    numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
+                                                    convergenceMinimumValue=float(getattr(opt_data, 'convergenceMinimumValue').get()),
+                                                    convergenceWindowSize=int(getattr(opt_data, 'convergenceWindowSize').get()))
+    elif optimalizer =='ConjugateGradientLineSearch':
+        registration_method.SetOptimizerAsConjugateGradientLineSearch(learningRate=float(getattr(opt_data, 'learningRate').get()),
+                                                    numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
+                                                    convergenceMinimumValue=float(getattr(opt_data, 'convergenceMinimumValue').get()),
+                                                    convergenceWindowSize=int(getattr(opt_data, 'convergenceWindowSize').get()))
+    elif optimalizer =='RegularStepGradientDescent':
+        registration_method.SetOptimizerAsRegularStepGradientDescent(learningRate=float(getattr(opt_data, 'learningRate').get()),
+                                                    numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
+                                                    minStep=float(getattr(opt_data, 'minStep').get())
+                                                    )
+    elif optimalizer == "LBFGSB":
+        registration_method.SetOptimizerAsLBFGSB(
+            numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
+            gradientCovergenceTolerance = float(getattr(opt_data, 'gradientCovergenceTolerance').get()))
+
     registration_method.SetInitialTransform(transform)
 
     # add iteration callback, save central slice in xy, xz, yz planes
@@ -128,8 +175,9 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
     final_transform = registration_method.Execute(fixed_image, moving_image)
 
-    # print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
+    print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
     # sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
+
 

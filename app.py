@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import BOTH, LEFT, RIGHT, X, filedialog, Text
+from tkinter import BOTH, BOTTOM, LEFT, RIGHT, TOP, X, filedialog, Text
 
 from pygame import init
 import registration
@@ -13,6 +13,24 @@ FIX_IDX = 0
 
 MOV_IDX = 0
 
+class GradientData:
+    def __init__(self) -> None:
+        self.learningRate=tk.StringVar(value=0.008)
+        self.numberOfIterations=tk.StringVar(value=100)
+        self.convergenceMinimumValue=tk.StringVar(value=1e-6)
+        self.convergenceWindowSize=tk.StringVar(value=20)
+
+class StepGradientData:
+    def __init__(self) -> None:
+        self.learningRate=tk.StringVar(value=5)
+        self.numberOfIterations=tk.StringVar(value=100)
+        self.minStep=tk.StringVar(value=0.01)
+
+class LBFGSBData:
+    def __init__(self) -> None:
+        self.numberOfIterations=tk.StringVar(value=100)
+        self.gradientCovergenceTolerance = tk.StringVar(value="1e-5")
+
 
 # def update_metric(new_value):
 class App():
@@ -22,6 +40,11 @@ class App():
         self.metric = tk.StringVar()#(self.root, value='run registration to see results')
         self.metric.set('run registration to see results')
         self.interpolation = tk.StringVar(value=registration.interpolation_options[0])
+        self.sampling_percentage = tk.StringVar(value='0.1')
+        self.sampling_strategy = tk.StringVar(value=registration.sampling_strategies[0])
+        self.bins = tk.IntVar(value=50)
+        self.optimizer = tk.StringVar(value=registration.optimizers[0])
+        self.opt_frame_list = None
         self.build_gui()
 
 
@@ -35,13 +58,19 @@ class App():
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
         self.result_label = tk.Label(self.result_frame)
         self.result_label.pack()
-        registration.register(self.images[0], self.images[1], self, self.interpolation.get())
+
+        if float(self.sampling_percentage.get()) > 1:
+            self.sampling_percentage.set('1.0')
+        
+        self.metric.set('initializing registration...')
+        registration.register(self.images[0], self.images[1], self, self.interpolation.get(), self.sampling_percentage.get(), 
+                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data)
 
     def update_result_image(self, number):
         self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(number)))
         print(number, os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(number))
         
-        self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='bottom')
+        self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
 
 
     # fixed/moving mhd photo
@@ -67,6 +96,36 @@ class App():
         scale = tk.Scale(self.right_frame, from_=0, to=len(image_array) - 1, label=file_name.split('/')[-1], length=len(image_array), orient='horizontal',
                             command=update_image)
         scale.pack(pady=5)
+
+
+    def change_optimizer_fields(self, *args):
+        if self.opt_frame_list != None:
+            for frame in self.opt_frame_list:
+                for widgets in frame.winfo_children():
+                    widgets.destroy()
+                frame.destroy()
+        # else:
+        #     self.opt_frame = tk.Frame(self.right_frame)
+        #     self.opt_frame.pack(fill=X)
+        
+        self.opt_frame_list = []
+        if self.optimizer.get() in ['GradientDescent', 'GradientDescentLineSearch', 'ConjugateGradientLineSearch']:
+            self.opt_data = GradientData()
+        elif self.optimizer.get()=='RegularStepGradientDescent':
+            self.opt_data = StepGradientData()
+        elif self.optimizer.get() == 'LBFGSB':
+            self.opt_data = LBFGSBData()
+
+        for attr, value in self.opt_data.__dict__.items():
+            opt_frame = tk.Frame(self.opt_params_frame)
+            opt_frame.pack(fill=X)
+            lbl = tk.Label(opt_frame, text=str(attr), width=25)
+            lbl.pack(side=LEFT, padx=3, pady=5)
+            drop = tk.Entry(opt_frame, textvariable=getattr(self.opt_data, attr), width=10)
+            drop.pack(pady=5)
+            self.opt_frame_list.append(opt_frame)
+
+
 
 
     def build_gui(self):
@@ -115,9 +174,49 @@ class App():
         interpolation_frame.pack(fill=X)
         interpolation_lbl = tk.Label(interpolation_frame, text="Interpolation method: ", width=20)
         interpolation_lbl.pack(side=LEFT, padx=3, pady=5)
-
         drop = tk.OptionMenu(interpolation_frame, self.interpolation , *registration.interpolation_options)
         drop.pack(pady=5)
+
+        # number of histogram bins
+        bins_frame = tk.Frame(self.right_frame)
+        bins_frame.pack(fill=X)
+        bins_lbl = tk.Label(bins_frame, text="Number of histogram bins ", width=20)
+        bins_lbl.pack(side=LEFT, padx=3, pady=5)
+        bins_drop = tk.Entry(bins_frame, textvariable=self.bins, width=10)
+        bins_drop.pack(pady=5)
+
+        # sampling percentage field
+        percent_frame = tk.Frame(self.right_frame)
+        percent_frame.pack(fill=X)
+        percent_lbl = tk.Label(percent_frame, text="Sampling Percentage (0,1]: ", width=20)
+        percent_lbl.pack(side=LEFT, padx=3, pady=5)
+        percent = tk.Entry(percent_frame, textvariable=self.sampling_percentage , width=10)
+        percent.pack(pady=5)
+
+
+        # sampling strategy field
+        strategy_frame = tk.Frame(self.right_frame)
+        strategy_frame.pack(fill=X)
+        strategy_lbl = tk.Label(strategy_frame, text="Sampling Strategy: ", width=20)
+        strategy_lbl.pack(side=LEFT, padx=3, pady=5)
+        strategy_drop = tk.OptionMenu(strategy_frame, self.sampling_strategy, *registration.sampling_strategies)
+        strategy_drop.pack(pady=5)
+
+        # optimizer field
+        opt_frame = tk.Frame(self.right_frame)
+        opt_frame.pack(fill=X)
+
+        opt_frame1 = tk.Frame(opt_frame)
+        opt_frame1.pack(fill=X, side=TOP)
+        opt_lbl = tk.Label(opt_frame1, text="Optimalizer options: ", width=20)
+        opt_lbl.pack(side=LEFT, padx=3, pady=5)
+        opt_drop = tk.OptionMenu(opt_frame1, self.optimizer, *registration.optimizers)
+        opt_drop.pack(pady=(10,5))
+        self.optimizer.trace('w', self.change_optimizer_fields)
+
+        self.opt_params_frame = tk.Frame(opt_frame)
+        self.opt_params_frame.pack(fill=X, side=BOTTOM)
+        self.change_optimizer_fields()
 
 
         # registration button
@@ -142,91 +241,7 @@ class App():
         self.metric.set(value)
 
 
-        # def create_working_img(self, file_name, frame):
-        #     itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
-        #     image_array = sitk.GetArrayViewFromImage(itk_image)
 
-        #     def update_image(IDX):
-        #         for widget in frame.winfo_children():
-        #             widget.destroy()
-
-        #         itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
-        #         image_array = sitk.GetArrayViewFromImage(itk_image)
-        #         fig = plt.figure(figsize=(5, 4))
-        #         print(IDX)
-        #         plt.imshow(image_array[int(IDX)], cmap='Greys_r')
-        #         canvas_figure = FigureCanvasTkAgg(fig, master=frame)
-        #         canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        #     update_image(0)
-
-        #     # slider
-        #     scale = tk.Scale(self.root, from_=0, to=len(image_array) - 1, label=file_name.split('/')[-1], length=len(image_array), orient='horizontal',
-        #                         command=update_image)
-        #     scale.pack()
-
-
-
-
-
-# def add_image(idx, frame):
-#     file_name = filedialog.askopenfilename(initialdir=os.path.abspath(os.getcwd())+"\\data", title="Select Image")
-#     images[idx] = file_name
-#     create_working_img(file_name, frame)
-    
-
-# def run_registration():
-#     image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
-#     label = tk.Label(result_frame, image=image)
-#     label.pack()
-#     registration.register(images[0], images[1], label, metric_val)
-
-# def run_app():
-#     # front
-#     images = ["None", "None"]
-
-#     root = tk.Tk()
-
-#     canvas = tk.Canvas(root, height=500, width=700, bg="#263D42")
-#     canvas.pack(padx=10, pady=10)
-
-#     # Fixed frame
-#     fixed_frame = tk.Frame(root, bg="white")
-#     fixed_frame.place(relwidth=0.5, relheight=0.25)
-
-#     # Moving frame
-#     moving_frame = tk.Frame(root, bg="white")
-#     moving_frame.place(relwidth=0.5, relheight=0.25, relx=0.5, rely=0)
-
-#     result_frame = tk.Frame(root, bg='black')
-#     result_frame.place(relheight=0.375, relwidth=0.5, relx=0.25, rely=0.30)
-
-#     choose_fixed_image_button = tk.Button(root, text="Fixed image", padx=10, pady=5, fg="white",
-#                                           bg="#263D42", command=lambda: add_image(0, fixed_frame))
-
-#     choose_moving_image_button = tk.Button(root, text="Moving image", padx=10, pady=5, fg="white",
-#                                            bg="#263D42", command=lambda: add_image(1, moving_frame))
-
-#     choose_fixed_image_button.pack()
-#     choose_moving_image_button.pack()
-
-#     run_button = tk.Button(root, text="Run simple registration", padx=10, pady=5, fg="white",
-#                            bg="#263D42", command=run_registration)
-
-#     run_button.pack()
-
-#     # metrices
-#     metric_val = tk.StringVar(root, value='run registration to see results')
-#     frame1 = tk.Frame(root)
-#     frame1.pack(fill=X)
-
-#     lbl1 = tk.Label(frame1, text=" Metric value: ", width=6)
-#     lbl1.pack(side=LEFT, padx=5, pady=5)
-
-#     entry1 = tk.Entry(frame1, state='disabled', textvariable=metric_val)
-#     entry1.pack(fill=X, padx=5, expand=False)
-
-#     root.mainloop()
 
 
 if __name__ == "__main__":
