@@ -29,7 +29,7 @@ class StepGradientData:
 class LBFGSBData:
     def __init__(self) -> None:
         self.numberOfIterations=tk.StringVar(value=100)
-        self.gradientCovergenceTolerance = tk.StringVar(value="1e-5")
+        self.gradientConvergenceTolerance = tk.StringVar(value="1e-5")
 
 
 # def update_metric(new_value):
@@ -234,13 +234,21 @@ class App():
         entry1 = tk.Entry(frame1, state='disabled', textvariable=self.metric, width=35)
         entry1.pack(fill=X, padx=5, pady=5, expand=False)
 
+
+        #results_info - nie dziala
+        self.results_text = tk.Text(self.right_frame, state='disabled',  height=8, width=40)
+        self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
+
+
         self.root.mainloop()
 
 
     def set_metric(self, value):
         self.metric.set(value)
 
-
+    def set_results_text(self, text):
+        self.results_text.delete('1.0', 'end')
+        self.results_text.insert('1.0', text)
 
 
 

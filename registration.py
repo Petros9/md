@@ -158,7 +158,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     elif optimalizer == "LBFGSB":
         registration_method.SetOptimizerAsLBFGSB(
             numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
-            gradientCovergenceTolerance = float(getattr(opt_data, 'gradientCovergenceTolerance').get()))
+            gradientConvergenceTolerance = float(getattr(opt_data, 'gradientConvergenceTolerance').get()))
 
     registration_method.SetInitialTransform(transform)
 
@@ -176,6 +176,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     final_transform = registration_method.Execute(fixed_image, moving_image)
 
     print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
+    gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
     # sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
