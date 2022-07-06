@@ -45,6 +45,7 @@ class App():
         self.bins = tk.IntVar(value=50)
         self.optimizer = tk.StringVar(value=registration.optimizers[0])
         self.opt_frame_list = None
+        self.transform_file = tk.StringVar(value='(transform file is optional)')
         self.build_gui()
 
 
@@ -53,6 +54,10 @@ class App():
         self.images[idx] = file_name
         self.create_working_img(file_name, frame)
     
+
+    def add_file(self):
+        file_name = filedialog.askopenfilename(initialdir=os.path.abspath(os.getcwd()), title="Select Transform file")
+        self.transform_file.set(file_name)
 
     def run_registration(self):
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
@@ -168,6 +173,17 @@ class App():
     
         choose_fixed_image_button.pack(side=LEFT, pady=5, padx=20)
         choose_moving_image_button.pack(pady=5)
+
+
+        # transform file
+        transform_frame = tk.Frame(self.right_frame)
+        transform_frame.pack(fill=X)
+        transform_lbl = tk.Button(transform_frame, text="Transform file", padx=10, pady=5, fg="white",
+                                            bg="#263D42", command=lambda: self.add_file())
+        transform_lbl.pack(side=LEFT, padx=15, pady=5)
+        drop = tk.Entry(transform_frame, textvariable=self.transform_file, width=30)
+        drop.pack(pady=13)
+                    # jak się wybierze plik transformaty to on jest zapisany w zmiennej self.transform_file
 
         # interpolation method dropdown
         interpolation_frame = tk.Frame(self.right_frame)

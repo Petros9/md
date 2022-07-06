@@ -179,6 +179,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
-    # sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm')
+    sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm') 
+    # TODO wybór transformaty + zapis z nazwą jakąś
+    # TODO zapisać wyniki do tablicy i zrobić z nich wykres jak te cyferki wynikowe spadały
 
 
