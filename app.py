@@ -1,13 +1,14 @@
 import os
 import tkinter as tk
 from tkinter import BOTH, BOTTOM, LEFT, RIGHT, TOP, X, filedialog, Text
+from matplotlib.figure import Figure
 
 from pygame import init
 import registration
 from PIL import ImageTk, Image
 import SimpleITK as sitk
 import matplotlib.pylab as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 FIX_IDX = 0
 
@@ -46,6 +47,9 @@ class App():
         self.optimizer = tk.StringVar(value=registration.optimizers[0])
         self.opt_frame_list = None
         self.transform_file = tk.StringVar(value='(transform file is optional)')
+        self.new_transform_file = tk.StringVar(value='output/ct2mrT1')
+        self.res_fig = Figure(figsize = (4, 3), dpi = 100)
+        self.plot1 = self.res_fig.add_subplot(111)
         self.build_gui()
 
 
@@ -69,7 +73,15 @@ class App():
         
         self.metric.set('initializing registration...')
         registration.register(self.images[0], self.images[1], self, self.interpolation.get(), self.sampling_percentage.get(), 
-                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data)
+                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get())
+
+    def show_results(self, x,y):
+        print(x,y)
+        self.plot1.clear()
+        self.plot1.plot(x,y)
+        self.canvas.draw()
+        self.fig_toolbar.update()
+
 
     def update_result_image(self, number):
         self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(number)))
@@ -98,7 +110,7 @@ class App():
         update_image(0)
 
         # slider
-        scale = tk.Scale(self.right_frame, from_=0, to=len(image_array) - 1, label=file_name.split('/')[-1], length=len(image_array), orient='horizontal',
+        scale = tk.Scale(self.middle_frame, from_=0, to=len(image_array) - 1, label=file_name.split('/')[-1], length=len(image_array), orient='horizontal',
                             command=update_image)
         scale.pack(pady=5)
 
@@ -136,13 +148,17 @@ class App():
     def build_gui(self):
 
         # main frame - is divided into two columns: left one has images, in right one are buttons etc.
+        # right-right part has results
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(fill=X)
 
         self.left_frame = tk.Frame(self.main_frame)
         self.left_frame.pack(fill=BOTH, side=LEFT)
 
-        self.right_frame = tk.Frame(self.main_frame)
+        self.middle_frame = tk.Frame(self.main_frame)
+        self.middle_frame.pack(fill=BOTH, side=LEFT, pady=(40, 5))
+
+        self.right_frame = tk.Frame(self.main_frame) 
         self.right_frame.pack(fill=BOTH, side=RIGHT, pady=(40, 5))
 
 
@@ -162,7 +178,7 @@ class App():
 
 
         # buttons
-        btn_frame = tk.Frame(self.right_frame)
+        btn_frame = tk.Frame(self.middle_frame)
         btn_frame.pack(fill=X)
         choose_fixed_image_button = tk.Button(btn_frame, text="Fixed image", padx=10, pady=5, fg="white",
                                             bg="#263D42", command=lambda: self.add_image(0, fixed_frame))
@@ -176,7 +192,7 @@ class App():
 
 
         # transform file
-        transform_frame = tk.Frame(self.right_frame)
+        transform_frame = tk.Frame(self.middle_frame)
         transform_frame.pack(fill=X)
         transform_lbl = tk.Button(transform_frame, text="Transform file", padx=10, pady=5, fg="white",
                                             bg="#263D42", command=lambda: self.add_file())
@@ -186,7 +202,7 @@ class App():
                     # jak się wybierze plik transformaty to on jest zapisany w zmiennej self.transform_file
 
         # interpolation method dropdown
-        interpolation_frame = tk.Frame(self.right_frame)
+        interpolation_frame = tk.Frame(self.middle_frame)
         interpolation_frame.pack(fill=X)
         interpolation_lbl = tk.Label(interpolation_frame, text="Interpolation method: ", width=20)
         interpolation_lbl.pack(side=LEFT, padx=3, pady=5)
@@ -194,38 +210,38 @@ class App():
         drop.pack(pady=5)
 
         # number of histogram bins
-        bins_frame = tk.Frame(self.right_frame)
+        bins_frame = tk.Frame(self.middle_frame)
         bins_frame.pack(fill=X)
         bins_lbl = tk.Label(bins_frame, text="Number of histogram bins ", width=20)
-        bins_lbl.pack(side=LEFT, padx=3, pady=5)
+        bins_lbl.pack(side=LEFT, padx=5, pady=5)
         bins_drop = tk.Entry(bins_frame, textvariable=self.bins, width=10)
         bins_drop.pack(pady=5)
 
         # sampling percentage field
-        percent_frame = tk.Frame(self.right_frame)
+        percent_frame = tk.Frame(self.middle_frame)
         percent_frame.pack(fill=X)
         percent_lbl = tk.Label(percent_frame, text="Sampling Percentage (0,1]: ", width=20)
-        percent_lbl.pack(side=LEFT, padx=3, pady=5)
+        percent_lbl.pack(side=LEFT, padx=5, pady=5)
         percent = tk.Entry(percent_frame, textvariable=self.sampling_percentage , width=10)
         percent.pack(pady=5)
 
 
         # sampling strategy field
-        strategy_frame = tk.Frame(self.right_frame)
+        strategy_frame = tk.Frame(self.middle_frame)
         strategy_frame.pack(fill=X)
         strategy_lbl = tk.Label(strategy_frame, text="Sampling Strategy: ", width=20)
-        strategy_lbl.pack(side=LEFT, padx=3, pady=5)
+        strategy_lbl.pack(side=LEFT, padx=5, pady=5)
         strategy_drop = tk.OptionMenu(strategy_frame, self.sampling_strategy, *registration.sampling_strategies)
         strategy_drop.pack(pady=5)
 
         # optimizer field
-        opt_frame = tk.Frame(self.right_frame)
+        opt_frame = tk.Frame(self.middle_frame)
         opt_frame.pack(fill=X)
 
         opt_frame1 = tk.Frame(opt_frame)
         opt_frame1.pack(fill=X, side=TOP)
         opt_lbl = tk.Label(opt_frame1, text="Optimalizer options: ", width=20)
-        opt_lbl.pack(side=LEFT, padx=3, pady=5)
+        opt_lbl.pack(side=LEFT, padx=5, pady=5)
         opt_drop = tk.OptionMenu(opt_frame1, self.optimizer, *registration.optimizers)
         opt_drop.pack(pady=(10,5))
         self.optimizer.trace('w', self.change_optimizer_fields)
@@ -234,14 +250,22 @@ class App():
         self.opt_params_frame.pack(fill=X, side=BOTTOM)
         self.change_optimizer_fields()
 
+        # transform file save
+        interpolation_frame = tk.Frame(self.middle_frame)
+        interpolation_frame.pack(fill=X)
+        interpolation_lbl = tk.Label(interpolation_frame, text="Transform file name:", width=20)
+        interpolation_lbl.pack(side=LEFT, padx=5, pady=5)
+        drop = tk.Entry(interpolation_frame, textvariable= self.new_transform_file, width=35)
+        drop.pack(pady=5)
+
 
         # registration button
-        run_button = tk.Button(self.right_frame, text="Run simple registration", padx=10, pady=5, fg="white",
+        run_button = tk.Button(self.middle_frame, text="Run simple registration", padx=10, pady=5, fg="white",
                             bg="#263D42", command=self.run_registration)
         run_button.pack(pady=(10,5))
 
         # metrices results
-        frame1 = tk.Frame(self.right_frame)
+        frame1 = tk.Frame(self.middle_frame)
         frame1.pack(fill=X)
 
         lbl1 = tk.Label(frame1, text="Metric value: ", width=10)
@@ -251,9 +275,18 @@ class App():
         entry1.pack(fill=X, padx=5, pady=5, expand=False)
 
 
-        #results_info - nie dziala
-        self.results_text = tk.Text(self.right_frame, state='disabled',  height=8, width=40)
-        self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
+        #results_info  dziala
+        frame1 = tk.Frame(self.right_frame)
+        frame1.pack(fill=X)
+        self.canvas = FigureCanvasTkAgg(self.res_fig, master = frame1)  
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
+        self.fig_toolbar = NavigationToolbar2Tk(self.canvas, frame1)
+        self.fig_toolbar.update()
+        self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
+
+        # self.results_text = tk.Text(self.middle_frame, state='disabled',  height=8, width=40)
+        # self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
 
 
         self.root.mainloop()
@@ -262,9 +295,9 @@ class App():
     def set_metric(self, value):
         self.metric.set(value)
 
-    def set_results_text(self, text):
-        self.results_text.delete('1.0', 'end')
-        self.results_text.insert('1.0', text)
+    # def set_results_text(self, text):
+    #     self.results_text.delete('1.0', 'end')
+    #     self.results_text.insert('1.0', text)
 
 
 

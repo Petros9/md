@@ -79,6 +79,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     # values so that they are in [0,255], this satisfies the requirements
     # of the jpg format
     print(iteration_number, ": ", registration_method.GetMetricValue())
+    results.append(registration_method.GetMetricValue())
     gui.set_metric(registration_method.GetMetricValue())
     combined_isotropic = []
     for img in combined:
@@ -107,18 +108,25 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
 
 # function which runs whole registration in thread (gui was freezing)
 def register(fixed_image_name, moving_image_name, gui, interpolation_method, sampling_percent, 
-            sampling_strategy, bins, optimalizer, opt_data): 
+            sampling_strategy, bins, optimalizer, opt_data, transform_file): 
     print(float(sampling_percent))
 
     new_thread = Thread(target=registration_computation, daemon=True,
                         args=(fixed_image_name, moving_image_name, gui, interpolation_method,sampling_percent,
-                        sampling_strategy, bins, optimalizer, opt_data))
+                        sampling_strategy, bins, optimalizer, opt_data, transform_file))
     final_transform = new_thread.start()
+
+    # print(results)
+    # return 
    
 
 
 def registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method, 
-                            sampling_percent, sampling_strategy, bins, optimalizer, opt_data):
+                            sampling_percent, sampling_strategy, bins, optimalizer, opt_data, transform_file):
+      
+    global results
+    results = []
+
       # read the images
     fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
     moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
@@ -176,11 +184,14 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     final_transform = registration_method.Execute(fixed_image, moving_image)
 
     print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
-    gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
+    # gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
-    sitk.WriteTransform(final_transform, 'output/ct2mrT1.tfm') 
-    # TODO wybór transformaty + zapis z nazwą jakąś
+    sitk.WriteTransform(final_transform, transform_file+'.tfm') 
+    x = [x for x in range(iteration_number)]
+    y =  results
+    gui.show_results(x,y)
+    # wybór transformaty + zapis z nazwą jakąś # DONE
     # TODO zapisać wyniki do tablicy i zrobić z nich wykres jak te cyferki wynikowe spadały
 
 
