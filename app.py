@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import BOTH, BOTTOM, LEFT, RIGHT, TOP, X, filedialog, Text
 from matplotlib.figure import Figure
 
-from pygame import init
+
 import registration
 from PIL import ImageTk, Image
 import SimpleITK as sitk
@@ -51,11 +51,22 @@ class App():
         self.res_fig = Figure(figsize = (4, 3), dpi = 100)
         self.plot1 = self.res_fig.add_subplot(111)
         self.build_gui()
+        self.moving_frame = None
+        self.moving_image = None
 
+
+    def transform_point(self, point):
+        transform = sitk.ReadTransform(self.transform_file.get())
+        transformed_point = transform.TransformPoint(point)
+        return transformed_point
 
     def add_image(self, idx, frame):
-        file_name = filedialog.askopenfilename(initialdir=os.path.abspath(os.getcwd())+"\\data", title="Select Image")
+        file_name = filedialog.askopenfilename(initialdir=os.path.abspath(os.getcwd())+"/data", title="Select Image")
         self.images[idx] = file_name
+        if idx == 1:
+            self.moving_image = file_name
+            self.moving_frame = frame
+
         self.create_working_img(file_name, frame)
     
 
@@ -75,22 +86,37 @@ class App():
         registration.register(self.images[0], self.images[1], self, self.interpolation.get(), self.sampling_percentage.get(), 
                                 self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get())
 
-    def show_results(self, x,y):
-        print(x,y)
+    def show_results(self, x, y):
+        print(x, y)
         self.plot1.clear()
-        self.plot1.plot(x,y)
+        self.plot1.plot(x, y)
         self.canvas.draw()
         self.fig_toolbar.update()
 
 
     def update_result_image(self, number):
-        self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(number)))
-        print(number, os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(number))
+        self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
+        print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
         
         self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
 
 
     # fixed/moving mhd photo
+
+    def update_moving_image(self, file_name, frame, IDX, point):
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
+        image_array = sitk.GetArrayViewFromImage(itk_image)
+        fig = plt.figure(figsize=(5, 4))
+
+        plt.plot(point[0], point[1], 'ro', markersize=4)
+        fig.canvas.draw()
+        plt.imshow(image_array[int(IDX)], cmap='Greys_r')
+        canvas_figure = FigureCanvasTkAgg(fig, master=frame)
+        canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
     def create_working_img(self, file_name, frame):
         itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
         image_array = sitk.GetArrayViewFromImage(itk_image)
@@ -102,7 +128,17 @@ class App():
             itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
             image_array = sitk.GetArrayViewFromImage(itk_image)
             fig = plt.figure(figsize=(5, 4))
-            print(IDX)
+
+            def mouse_event(event):
+                print('x: {} and y: {}'.format(event.xdata, event.ydata))
+                plt.plot(event.xdata, event.ydata, 'ro', markersize=4)
+                fig.canvas.draw()
+                current_point = (event.xdata, event.ydata, 0)
+                point = self.transform_point(current_point)
+                print(point)
+                self.update_moving_image(self.moving_image, self.moving_frame, IDX, point)
+                
+            fig.canvas.mpl_connect('button_press_event', mouse_event)
             plt.imshow(image_array[int(IDX)], cmap='Greys_r')
             canvas_figure = FigureCanvasTkAgg(fig, master=frame)
             canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)

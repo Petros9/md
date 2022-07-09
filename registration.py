@@ -59,7 +59,6 @@ def parse_strategies(method, registration_method):
     return switch.get(method)
 
 
-
 def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
     global iteration_number
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
