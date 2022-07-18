@@ -1,4 +1,5 @@
 import os
+from unittest import result
 import SimpleITK as sitk
 import tk
 from PIL import ImageTk, Image
@@ -58,6 +59,7 @@ def parse_strategies(method, registration_method):
 
     return switch.get(method)
 
+ 
 
 def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
     global iteration_number
@@ -67,13 +69,14 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
                                        sitk.sitkLinear, 0.0, # czy tu ma byc ta sama interpolacja co w registration() ??????
                                        moving_image.GetPixelIDValue())
     # extract the central slice in xy, xz, yz and alpha blend them
+    result_image = moving_transformed
     combined = [fixed[:, :, central_indexes[2]] + -
     moving_transformed[:, :, central_indexes[2]],
                 fixed[:, central_indexes[1], :] + -
                 moving_transformed[:, central_indexes[1], :],
                 fixed[central_indexes[0], :, :] + -
                 moving_transformed[central_indexes[0], :, :]]
-
+    
     # resample the alpha blended images to be isotropic and rescale intensity
     # values so that they are in [0,255], this satisfies the requirements
     # of the jpg format
@@ -94,6 +97,12 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
                                       img.GetPixelIDValue())
         combined_isotropic.append(sitk.Cast(sitk.RescaleIntensity(resampled_img),
                                             sitk.sitkUInt8))
+        # if result_image == None:
+        # result_image = sitk.Resample(moving_transformed[:, :, central_indexes[2]], new_size, sitk.Transform(),
+        #                               sitk.sitkLinear, img.GetOrigin(),
+        #                               new_spacing, img.GetDirection(), 0.0,
+        #                               img.GetPixelIDValue())
+
     # tile the three images into one large image and save using the given file
     # name prefix and the iteration number
     sitk.WriteImage(sitk.Tile(combined_isotropic, (1, 3)),
@@ -101,14 +110,18 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     next_image_number = format(iteration_number, '03d')
     # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(next_image_number)))
     # label.configure(image=image)
+    
     gui.update_result_image(next_image_number)
+    gui.show_chess( result_image, fixed)
     iteration_number += 1
-
+    
 
 # function which runs whole registration in thread (gui was freezing)
 def register(fixed_image_name, moving_image_name, gui, interpolation_method, sampling_percent, 
             sampling_strategy, bins, optimalizer, opt_data, transform_file): 
     print(float(sampling_percent))
+    global result_image 
+    result_image = None
 
     new_thread = Thread(target=registration_computation, daemon=True,
                         args=(fixed_image_name, moving_image_name, gui, interpolation_method,sampling_percent,
@@ -190,7 +203,6 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     x = [x for x in range(iteration_number)]
     y =  results
     gui.show_results(x,y)
-    # wybór transformaty + zapis z nazwą jakąś # DONE
-    # TODO zapisać wyniki do tablicy i zrobić z nich wykres jak te cyferki wynikowe spadały
+    
 
 

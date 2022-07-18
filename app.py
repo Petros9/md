@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import BOTH, BOTTOM, LEFT, RIGHT, TOP, X, filedialog, Text
 from matplotlib.figure import Figure
 
-
 import registration
 from PIL import ImageTk, Image
 import SimpleITK as sitk
@@ -93,12 +92,22 @@ class App():
         self.canvas.draw()
         self.fig_toolbar.update()
 
+    def show_chess(self, chess_result, fixed=None):
+         #chessboard
+        if chess_result is not None:
+            itk_image = sitk.ReadImage(self.images[0], sitk.sitkFloat32)
+            self.chessboard = ImageTk.PhotoImage(sitk.CheckerBoard(itk_image, chess_result, [4, 4, 4]))
+            self.chess_label.configure(image=self.chessboard)
 
-    def update_result_image(self, number):
+        # ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
+
+
+    def update_result_image(self, number, chess_result=None):
         self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
         print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
         
         self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
+
 
 
     # fixed/moving mhd photo
@@ -324,8 +333,23 @@ class App():
         # self.results_text = tk.Text(self.middle_frame, state='disabled',  height=8, width=40)
         # self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
 
+        self.chess_frame = tk.Frame(self.right_frame, bg='black')
+        self.chess_frame.place(relheight=0.4, relwidth=0.8, relx=0.05, rely=0.5)
+        self.chess_label = tk.Label(self.chess_frame)
+        self.chess_label.pack()
 
         self.root.mainloop()
+
+    # def display_chessboard(self,img2=None):
+    #     guig.MultiImageDisplay(
+    #         image_list=[
+    #             sitk.CheckerBoard(self.images[0], self.images[1], [4, 4, 4])
+    #             # sitk.CheckerBoard(img1_255, img2_255, (10, 10, 4)),
+    #         ],
+    #         title_list=["original intensities"],
+    #         figure_size=(9, 3),
+    #     )
+
 
 
     def set_metric(self, value):
