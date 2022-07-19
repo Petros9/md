@@ -1,6 +1,8 @@
 import os
 from unittest import result
 import SimpleITK as sitk
+from matplotlib import pyplot as plt
+import numpy as np
 import tk
 from PIL import ImageTk, Image
 from threading import Thread
@@ -112,7 +114,12 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     # label.configure(image=image)
     
     gui.update_result_image(next_image_number)
-    gui.show_chess( result_image, fixed)
+    # moving_resampled = sitk.Resample(moving_image, fixed, final_transform, sitk.sitkLinear, 0.0, moving_image.GetPixelID())
+
+    gui.show_chess(fixed, moving)
+    
+    # gui.show_chess( sitk.Cast(fixed[:, central_indexes[1], :],sitk.sitkFloat32),
+    #             sitk.Cast(moving_transformed[:, central_indexes[1], :], sitk.sitkFloat32))
     iteration_number += 1
     
 
@@ -202,6 +209,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     sitk.WriteTransform(final_transform, transform_file+'.tfm') 
     x = [x for x in range(iteration_number)]
     y =  results
+
+    
     gui.show_results(x,y)
     
 

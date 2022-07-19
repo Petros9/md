@@ -52,6 +52,7 @@ class App():
         self.build_gui()
         self.moving_frame = None
         self.moving_image = None
+        self.chess = None
 
 
     def transform_point(self, point):
@@ -77,6 +78,7 @@ class App():
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
         self.result_label = tk.Label(self.result_frame)
         self.result_label.pack()
+        self.chess = None
 
         if float(self.sampling_percentage.get()) > 1:
             self.sampling_percentage.set('1.0')
@@ -92,14 +94,31 @@ class App():
         self.canvas.draw()
         self.fig_toolbar.update()
 
-    def show_chess(self, chess_result, fixed=None):
+    def show_chess(self, fixed, moving):
          #chessboard
-        if chess_result is not None:
-            itk_image = sitk.ReadImage(self.images[0], sitk.sitkFloat32)
-            self.chessboard = ImageTk.PhotoImage(sitk.CheckerBoard(itk_image, chess_result, [4, 4, 4]))
-            self.chess_label.configure(image=self.chessboard)
+        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [10, 6, 8]))
 
-        # ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
+        if chess_result is not None:
+
+            def update_image(IDX):
+                for widget in self.chess_frame.winfo_children():
+                    widget.destroy()
+
+                fig, ax = plt.subplots(figsize=(20, 12))
+                plt.imshow(chess_result[int(IDX), :, :], cmap='Greys_r')
+                canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
+                canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+            update_image(180)
+
+            if self.chess is None:
+                chess_arr = (chess_result)
+                scale = tk.Scale(self.right_frame, from_=0, to=len(chess_arr) - 1, label="Chessboard", length=len(chess_arr), orient='horizontal',
+                                command=update_image)
+                scale.pack(pady=5)
+
+            self.chess= chess_result
+
 
 
     def update_result_image(self, number, chess_result=None):
@@ -108,9 +127,20 @@ class App():
         
         self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
 
-
-
     # fixed/moving mhd photo
+
+    def update_chess_image(self, chess, frame, IDX, point):
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        image_array = (chess)
+        fig = plt.figure(figsize=(5, 4))
+
+        plt.plot(point[0], point[1], 'ro', markersize=4)
+        fig.canvas.draw()
+        plt.imshow(chess[int(IDX), :, : ], cmap='Greys_r')
+        canvas_figure = FigureCanvasTkAgg(fig, master=frame)
+        canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
     def update_moving_image(self, file_name, frame, IDX, point):
         for widget in frame.winfo_children():
@@ -207,7 +237,7 @@ class App():
         self.right_frame.pack(fill=BOTH, side=RIGHT, pady=(40, 5))
 
 
-        canvas = tk.Canvas(self.left_frame, height=900, width=700, bg="#263D42")
+        canvas = tk.Canvas(self.left_frame, height=900, width=730, bg="#263D42")
         canvas.pack()
 
         # Fixed frame
@@ -334,7 +364,7 @@ class App():
         # self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
 
         self.chess_frame = tk.Frame(self.right_frame, bg='black')
-        self.chess_frame.place(relheight=0.4, relwidth=0.8, relx=0.05, rely=0.5)
+        self.chess_frame.place(relheight=0.3, relwidth=1, relx=0.05, rely=0.5)
         self.chess_label = tk.Label(self.chess_frame)
         self.chess_label.pack()
 
