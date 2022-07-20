@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import BOTH, BOTTOM, LEFT, RIGHT, TOP, X, filedialog, Text
+from tkinter import BOTH, BOTTOM, LEFT, NE, NW, RIGHT, TOP, VERTICAL, X, Y, Canvas, Scrollbar, filedialog, Text
 from matplotlib.figure import Figure
 
 import registration
@@ -76,8 +76,18 @@ class App():
 
     def run_registration(self):
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
-        self.result_label = tk.Label(self.result_frame)
-        self.result_label.pack()
+        canvas = Canvas(self.result_frame, bg="Black", width=self.result_frame.winfo_width(), height=self.result_frame.winfo_height())
+        canvas.pack()
+
+        self.result_label = tk.Label(canvas)
+        canvas.create_window(0, 0, window=self.result_label, anchor=NW)
+
+        vbar=Scrollbar(canvas,orient=VERTICAL, command=canvas.yview)
+        # vbar.pack(side=RIGHT,fill=Y)
+        vbar.place(relx=1, rely=0, relheight=1, anchor=NE)
+        canvas.config(yscrollcommand=vbar.set, scrollregion=(0, 0, 0, 900))
+
+        # self.result_label.pack(expand=True)
         self.chess = None
 
         if float(self.sampling_percentage.get()) > 1:
@@ -99,7 +109,7 @@ class App():
         chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [10, 6, 8]))
 
         if chess_result is not None:
-
+            IDX = 0
             def update_image(IDX):
                 for widget in self.chess_frame.winfo_children():
                     widget.destroy()
@@ -109,7 +119,7 @@ class App():
                 canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
                 canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-            update_image(180)
+            update_image(IDX)
 
             if self.chess is None:
                 chess_arr = (chess_result)
@@ -237,7 +247,9 @@ class App():
         self.right_frame.pack(fill=BOTH, side=RIGHT, pady=(40, 5))
 
 
-        canvas = tk.Canvas(self.left_frame, height=900, width=730, bg="#263D42")
+        canvas = tk.Canvas(self.left_frame, height=780, width=710, bg="#263D42")
+       
+        # canvas.config(yscrollcommand=vbar.set)
         canvas.pack()
 
         # Fixed frame
@@ -249,7 +261,7 @@ class App():
         moving_frame.place( relwidth=0.5, relheight=0.30, relx=0.5, rely=0)
 
         self.result_frame = tk.Frame(self.left_frame, bg='black')
-        self.result_frame.place(relheight=0.7, relwidth=0.5, relx=0.25, rely=0.30)
+        self.result_frame.place(relheight=0.7, relwidth=0.45, relx=0.25, rely=0.30)
 
 
         # buttons
@@ -364,7 +376,7 @@ class App():
         # self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
 
         self.chess_frame = tk.Frame(self.right_frame, bg='black')
-        self.chess_frame.place(relheight=0.3, relwidth=1, relx=0.05, rely=0.5)
+        self.chess_frame.place(relheight=0.35, relwidth=1, relx=0.05, rely=0.5)
         self.chess_label = tk.Label(self.chess_frame)
         self.chess_label.pack()
 
