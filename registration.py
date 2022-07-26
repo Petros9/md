@@ -68,10 +68,9 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
     moving_transformed = sitk.Resample(moving, fixed, transform,
-                                       sitk.sitkLinear, 0.0, # czy tu ma byc ta sama interpolacja co w registration() ??????
+                                       sitk.sitkLinear, 0.0, 
                                        moving_image.GetPixelIDValue())
     # extract the central slice in xy, xz, yz and alpha blend them
-    result_image = moving_transformed
     combined = [fixed[:, :, central_indexes[2]] + -
     moving_transformed[:, :, central_indexes[2]],
                 fixed[:, central_indexes[1], :] + -
@@ -99,27 +98,16 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
                                       img.GetPixelIDValue())
         combined_isotropic.append(sitk.Cast(sitk.RescaleIntensity(resampled_img),
                                             sitk.sitkUInt8))
-        # if result_image == None:
-        # result_image = sitk.Resample(moving_transformed[:, :, central_indexes[2]], new_size, sitk.Transform(),
-        #                               sitk.sitkLinear, img.GetOrigin(),
-        #                               new_spacing, img.GetDirection(), 0.0,
-        #                               img.GetPixelIDValue())
 
     # tile the three images into one large image and save using the given file
     # name prefix and the iteration number
     sitk.WriteImage(sitk.Tile(combined_isotropic, (1, 3)),
                     file_name_prefix + format(iteration_number, '03d') + '.jpg')
     next_image_number = format(iteration_number, '03d')
-    # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration{0}.jpg".format(next_image_number)))
-    # label.configure(image=image)
     
     gui.update_result_image(next_image_number)
-    # moving_resampled = sitk.Resample(moving_image, fixed, final_transform, sitk.sitkLinear, 0.0, moving_image.GetPixelID())
-
-    gui.show_chess(fixed, moving)
+    gui.show_chess(fixed, moving_transformed)
     
-    # gui.show_chess( sitk.Cast(fixed[:, central_indexes[1], :],sitk.sitkFloat32),
-    #             sitk.Cast(moving_transformed[:, central_indexes[1], :], sitk.sitkFloat32))
     iteration_number += 1
     
 
@@ -153,7 +141,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     transform = sitk.CenteredTransformInitializer(fixed_image,
                                                   moving_image,
                                                   sitk.Euler3DTransform(),
-                                                  sitk.CenteredTransformInitializerFilter.MOMENTS)
+                                                  sitk.CenteredTransformInitializerFilter.GEOMETRY)
 
     grid_physical_spacing = [50.0, 50.0, 50.0]  # A control point every 50mm
     image_physical_size = [
@@ -208,8 +196,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     registration_method.SetOptimizerScalesFromPhysicalShift()
 
-    registration_method.SetInitialTransform(ffd_transform)
-    # registration_method.SetTransform() #TODO
+    registration_method.SetInitialTransform(transform)
 
     # add iteration callback, save central slice in xy, xz, yz planes
     global iteration_number
@@ -223,6 +210,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
     final_transform = registration_method.Execute(fixed_image, moving_image)
+    save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
+                                     registration_method, gui)
 
     print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
