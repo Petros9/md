@@ -2,6 +2,7 @@ import os
 import tkinter as tk
 from tkinter import BOTH, BOTTOM, LEFT, NE, NW, RIGHT, TOP, VERTICAL, X, Y, Canvas, Scrollbar, filedialog, Text
 from matplotlib.figure import Figure
+import math
 
 import registration
 from PIL import ImageTk, Image
@@ -10,8 +11,11 @@ import matplotlib.pylab as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 FIX_IDX = 0
-
 MOV_IDX = 0
+
+points_list = []
+transformed_points_list = []
+chart_results = []
 
 class GradientData:
     def __init__(self) -> None:
@@ -101,7 +105,6 @@ class App():
                                 self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get())
 
     def show_results(self, x, y):
-        print(x, y)
         self.plot1.clear()
         self.plot1.plot(x, y)
         self.canvas.draw()
@@ -136,7 +139,7 @@ class App():
 
     def update_result_image(self, number, chess_result=None):
         self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
-        print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
+        #print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
         
         self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
 
@@ -155,6 +158,58 @@ class App():
         canvas_figure = FigureCanvasTkAgg(fig, master=frame)
         canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
+    def calculate_distance(self, point_1, point_2):
+
+        print("  ")
+        print("point 1 ", point_1)
+        print("point 2 ", point_2)
+
+        print("distance ", str(math.dist(point_1, point_2)))
+        return math.dist(point_1, point_2)
+
+
+    def create_distance_list(self):
+
+        i = 0
+        while i != len(points_list):
+            distance = self.calculate_distance(points_list[i], points_list[i + 1])
+            chart_results.append(distance)
+            i = i + 2
+
+        fixed_points = points_list[::2]
+        i = 0
+        for point_1 in fixed_points:
+            point_2 = transformed_points_list[i]
+            distance = self.calculate_distance(point_1, point_2)
+            chart_results.append(distance)
+            i = i + 1
+    # fixed/moving mhd photo
+
+    def draw_moving_image_points(self):
+        frame = self.moving_frame
+        IDX = FIX_IDX
+        file_name = self.moving_image
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        points_to_be_drawn = points_list[::2]
+        itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
+        image_array = sitk.GetArrayViewFromImage(itk_image)
+        fig = plt.figure(figsize=(5, 4))
+
+        for point in points_to_be_drawn:
+            result_point = self.transform_point(point)
+            transformed_points_list.append(result_point)
+            plt.plot(result_point[0], result_point[1], 'ro', markersize=4)
+            fig.canvas.draw()
+
+        plt.imshow(image_array[int(IDX)], cmap='Greys_r')
+        canvas_figure = FigureCanvasTkAgg(fig, master=frame)
+        canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.create_distance_list()
+        x = [x for x in range(len(chart_results))]
+        self.show_results(x, chart_results)
+
     def update_moving_image(self, file_name, frame, IDX, point):
         for widget in frame.winfo_children():
             widget.destroy()
@@ -163,6 +218,14 @@ class App():
         image_array = sitk.GetArrayViewFromImage(itk_image)
         fig = plt.figure(figsize=(5, 4))
 
+        def mouse_event(event):
+            plt.plot(event.xdata, event.ydata, 'ro', markersize=4)
+            fig.canvas.draw()
+            current_point = (event.xdata, event.ydata, 0)
+            #point = self.transform_point(current_point)
+            points_list.append(current_point)
+
+        fig.canvas.mpl_connect('button_press_event', mouse_event)
         plt.plot(point[0], point[1], 'ro', markersize=4)
         fig.canvas.draw()
         plt.imshow(image_array[int(IDX)], cmap='Greys_r')
@@ -180,16 +243,14 @@ class App():
             itk_image = sitk.ReadImage(file_name, sitk.sitkFloat32)
             image_array = sitk.GetArrayViewFromImage(itk_image)
             fig = plt.figure(figsize=(5, 4))
+            self.FIX_IDX = IDX
 
             def mouse_event(event):
-                print('x: {} and y: {}'.format(event.xdata, event.ydata))
                 plt.plot(event.xdata, event.ydata, 'ro', markersize=4)
                 fig.canvas.draw()
                 current_point = (event.xdata, event.ydata, 0)
-                point = self.transform_point(current_point)
-                print(point)
-                self.update_moving_image(self.moving_image, self.moving_frame, IDX, point)
-                
+                points_list.append(current_point)
+
             fig.canvas.mpl_connect('button_press_event', mouse_event)
             plt.imshow(image_array[int(IDX)], cmap='Greys_r')
             canvas_figure = FigureCanvasTkAgg(fig, master=frame)
@@ -354,6 +415,12 @@ class App():
                             bg="#263D42", command=self.run_registration)
         run_button.pack(pady=(10,5))
 
+
+
+        point_button = tk.Button(self.middle_frame, text="Transform points", padx=10, pady=5, fg="white",
+                            bg="#263D42", command=self.draw_moving_image_points)
+
+        point_button.pack(pady=(10,5))
         # metrices results
         frame1 = tk.Frame(self.middle_frame)
         frame1.pack(fill=X)
@@ -375,8 +442,6 @@ class App():
         self.fig_toolbar.update()
         self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
 
-        # self.results_text = tk.Text(self.middle_frame, state='disabled',  height=8, width=40)
-        # self.results_text.pack(fill=X, side=BOTTOM, padx=5, pady=5, expand=False)
 
         self.chess_frame = tk.Frame(self.right_frame, bg='black')
         self.chess_frame.place(relheight=0.35, relwidth=1, relx=0.05, rely=0.5)
