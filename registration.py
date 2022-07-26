@@ -155,12 +155,31 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                   sitk.Euler3DTransform(),
                                                   sitk.CenteredTransformInitializerFilter.MOMENTS)
 
-    # multi-resolution rigid registration using Mutual Information
+    grid_physical_spacing = [50.0, 50.0, 50.0]  # A control point every 50mm
+    image_physical_size = [
+        size * spacing
+        for size, spacing in zip(fixed_image.GetSize(), fixed_image.GetSpacing())
+    ]
+    mesh_size = [
+        int(image_size / grid_spacing + 0.5)
+        for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)
+    ]
+
+    ffd_transform = sitk.BSplineTransformInitializer(
+        image1=fixed_image, transformDomainMeshSize=mesh_size, order=3
+    )
+
+    #  rigid registration using Mutual Information
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=bins)
     registration_method.SetMetricSamplingStrategy(parse_strategies(sampling_strategy, registration_method))
     registration_method.SetMetricSamplingPercentage(float(sampling_percent))
     registration_method.SetInterpolator(parse_interpolation(interpolation_method))
+
+    # multi-resolution
+    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[1, 2, 4])
+    registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
+    registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
 
     if optimalizer == 'GradientDescent':
         registration_method.SetOptimizerAsGradientDescent(learningRate=float(getattr(opt_data, 'learningRate').get()),
@@ -187,7 +206,10 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
             numberOfIterations=int(getattr(opt_data, 'numberOfIterations').get()),
             gradientConvergenceTolerance = float(getattr(opt_data, 'gradientConvergenceTolerance').get()))
 
-    registration_method.SetInitialTransform(transform)
+    registration_method.SetOptimizerScalesFromPhysicalShift()
+
+    registration_method.SetInitialTransform(ffd_transform)
+    # registration_method.SetTransform() #TODO
 
     # add iteration callback, save central slice in xy, xz, yz planes
     global iteration_number

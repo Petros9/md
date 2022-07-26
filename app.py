@@ -40,7 +40,7 @@ class App():
         self.metric = tk.StringVar()#(self.root, value='run registration to see results')
         self.metric.set('run registration to see results')
         self.interpolation = tk.StringVar(value=registration.interpolation_options[0])
-        self.sampling_percentage = tk.StringVar(value='0.1')
+        self.sampling_percentage = tk.StringVar(value='0.01')
         self.sampling_strategy = tk.StringVar(value=registration.sampling_strategies[0])
         self.bins = tk.IntVar(value=50)
         self.optimizer = tk.StringVar(value=registration.optimizers[0])
@@ -49,10 +49,12 @@ class App():
         self.new_transform_file = tk.StringVar(value='output/ct2mrT1')
         self.res_fig = Figure(figsize = (4, 3), dpi = 100)
         self.plot1 = self.res_fig.add_subplot(111)
-        self.build_gui()
         self.moving_frame = None
         self.moving_image = None
         self.chess = None
+        self.canvas_res = None
+
+        self.build_gui()
 
 
     def transform_point(self, point):
@@ -76,19 +78,20 @@ class App():
 
     def run_registration(self):
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
-        canvas = Canvas(self.result_frame, bg="Black", width=self.result_frame.winfo_width(), height=self.result_frame.winfo_height())
-        canvas.pack()
+        if self.canvas_res == None:
+            self.canvas_res = Canvas(self.result_frame, bg="Black", width=self.result_frame.winfo_width(), height=self.result_frame.winfo_height())
+            self.canvas_res.pack()
 
-        self.result_label = tk.Label(canvas)
-        canvas.create_window(0, 0, window=self.result_label, anchor=NW)
+            self.result_label = tk.Label(self.canvas_res)
+            self.canvas_res.create_window(0, 0, window=self.result_label, anchor=NW)
 
-        vbar=Scrollbar(canvas,orient=VERTICAL, command=canvas.yview)
+            vbar=Scrollbar(self.canvas_res,orient=VERTICAL, command=self.canvas_res.yview)
         # vbar.pack(side=RIGHT,fill=Y)
-        vbar.place(relx=1, rely=0, relheight=1, anchor=NE)
-        canvas.config(yscrollcommand=vbar.set, scrollregion=(0, 0, 0, 900))
+            vbar.place(relx=1, rely=0, relheight=1, anchor=NE)
+            self.canvas_res.config(yscrollcommand=vbar.set, scrollregion=(0, 0, 0, 900))
 
         # self.result_label.pack(expand=True)
-        self.chess = None
+        # self.chess = 0
 
         if float(self.sampling_percentage.get()) > 1:
             self.sampling_percentage.set('1.0')
