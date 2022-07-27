@@ -85,6 +85,8 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     results.append(registration_method.GetMetricValue())
     gui.set_metric(registration_method.GetMetricValue())
     combined_isotropic = []
+
+    #TODO przeskalowac obraz roznicowy
     for img in combined:
         original_spacing = img.GetSpacing()
         original_size = img.GetSize()
@@ -167,6 +169,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     registration_method.SetInterpolator(parse_interpolation(interpolation_method))
 
     # multi-resolution
+    #TODO zrobi tk by byly trzy schodki
     registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1])
     registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
@@ -209,8 +212,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     # initial_transform.SetSmoothingGaussianOnUpdate(
     #     varianceForUpdateField=0.0, varianceForTotalField=2.0)
     # registration_method.SetMetricAsDemons(10)
-    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1, 1])
-    registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0, 0])
+    #registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[1, 2, 4])
+    #registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
 
 
 

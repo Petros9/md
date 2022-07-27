@@ -89,7 +89,7 @@ class App():
             self.result_label = tk.Label(self.canvas_res)
             self.canvas_res.create_window(0, 0, window=self.result_label, anchor=NW)
 
-            vbar=Scrollbar(self.canvas_res,orient=VERTICAL, command=self.canvas_res.yview)
+            vbar=Scrollbar(self.canvas_res, orient=VERTICAL, command=self.canvas_res.yview)
         # vbar.pack(side=RIGHT,fill=Y)
             vbar.place(relx=1, rely=0, relheight=1, anchor=NE)
             self.canvas_res.config(yscrollcommand=vbar.set, scrollregion=(0, 0, 0, 900))
@@ -110,6 +110,8 @@ class App():
         self.canvas.draw()
         self.fig_toolbar.update()
 
+
+    #TODO zwiększyć kontrast szachownicy
     def show_chess(self, fixed, moving):
          #chessboard
         chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [10, 6, 8]))
@@ -133,7 +135,7 @@ class App():
                                 command=update_image)
                 scale.pack(pady=5)
 
-            self.chess= chess_result
+            self.chess = chess_result
 
 
 
@@ -145,19 +147,8 @@ class App():
 
     # fixed/moving mhd photo
 
-    def update_chess_image(self, chess, frame, IDX, point):
-        for widget in frame.winfo_children():
-            widget.destroy()
 
-        image_array = (chess)
-        fig = plt.figure(figsize=(5, 4))
-
-        plt.plot(point[0], point[1], 'ro', markersize=4)
-        fig.canvas.draw()
-        plt.imshow(chess[int(IDX), :, : ], cmap='Greys_r')
-        canvas_figure = FigureCanvasTkAgg(fig, master=frame)
-        canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
+    #TODO zrobic histogramy zamiast wykresu
     def calculate_distance(self, point_1, point_2):
 
         print("  ")
@@ -435,7 +426,7 @@ class App():
         #results_info  dziala
         frame1 = tk.Frame(self.right_frame)
         frame1.pack(fill=X)
-        self.canvas = FigureCanvasTkAgg(self.res_fig, master = frame1)  
+        self.canvas = FigureCanvasTkAgg(self.res_fig, master=frame1)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
         self.fig_toolbar = NavigationToolbar2Tk(self.canvas, frame1)
