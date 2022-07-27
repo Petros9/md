@@ -157,6 +157,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
         image1=fixed_image, transformDomainMeshSize=mesh_size, order=3
     )
 
+
+
     #  rigid registration using Mutual Information
     registration_method = sitk.ImageRegistrationMethod()
     registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=bins)
@@ -165,7 +167,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     registration_method.SetInterpolator(parse_interpolation(interpolation_method))
 
     # multi-resolution
-    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[1, 2, 4])
+    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1])
     registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
 
@@ -196,7 +198,24 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     registration_method.SetOptimizerScalesFromPhysicalShift()
 
-    registration_method.SetInitialTransform(transform)
+    # transform_to_displacment_field_filter = sitk.TransformToDisplacementFieldFilter()
+    # transform_to_displacment_field_filter.SetReferenceImage(fixed_image)
+    # # The image returned from the initial_transform_filter is transferred to the transform and cleared out.
+    # initial_transform = sitk.DisplacementFieldTransform(
+    #     transform_to_displacment_field_filter.Execute(sitk.Transform())
+    # )
+
+    # # Regularization (update field - viscous, total field - elastic).
+    # initial_transform.SetSmoothingGaussianOnUpdate(
+    #     varianceForUpdateField=0.0, varianceForTotalField=2.0)
+    # registration_method.SetMetricAsDemons(10)
+    registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1, 1])
+    registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0, 0])
+
+
+
+    # transform = initial_transform
+    registration_method.SetInitialTransform(transform, inPlace=True)
 
     # add iteration callback, save central slice in xy, xz, yz planes
     global iteration_number

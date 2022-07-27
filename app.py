@@ -442,7 +442,6 @@ class App():
         self.fig_toolbar.update()
         self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
 
-
         self.chess_frame = tk.Frame(self.right_frame, bg='black')
         self.chess_frame.place(relheight=0.35, relwidth=1, relx=0.05, rely=0.5)
         self.chess_label = tk.Label(self.chess_frame)
