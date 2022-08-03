@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import BOTH, BOTTOM, LEFT, NE, NW, RIGHT, TOP, VERTICAL, X, Y, Canvas, Scrollbar, filedialog, Text
 from matplotlib.figure import Figure
 import math
+import gui
 
 import registration
 from PIL import ImageTk, Image
@@ -57,6 +58,7 @@ class App():
         self.moving_image = None
         self.chess = None
         self.canvas_res = None
+        self.deform = tk.StringVar(value=registration.deformable_regist[0])
 
         self.build_gui()
 
@@ -102,7 +104,8 @@ class App():
         
         self.metric.set('initializing registration...')
         registration.register(self.images[0], self.images[1], self, self.interpolation.get(), self.sampling_percentage.get(), 
-                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get())
+                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get(),
+                                self.deform.get())
 
     def show_results(self, x, y):
         self.plot1.clear()
@@ -112,7 +115,7 @@ class App():
 
     def show_chess(self, fixed, moving):
          #chessboard
-        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [10, 6, 8]))
+        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [10, 6, 4]))
 
         if chess_result is not None:
             IDX = 0
@@ -120,8 +123,20 @@ class App():
                 for widget in self.chess_frame.winfo_children():
                     widget.destroy()
 
-                fig, ax = plt.subplots(figsize=(20, 12))
-                plt.imshow(chess_result[int(IDX), :, :], cmap='Greys_r')
+            #     fig, ax = plt.subplots(figsize=(20, 12))
+            #     plt.imshow(chess_result[int(IDX), :, :], cmap='Greys_r', vmin=self.moving_min_intensity,
+            # vmax=self.moving_max_intensity)
+
+
+                display = gui.MultiImageDisplay(
+                    image_list=[
+                        sitk.CheckerBoard(fixed, moving, [8, 5, 4]),
+                        # sitk.CheckerBoard(img1_2/55, img2_255, (10, 10, 4)),
+                    ],
+                    title_list=["chessboard"],
+                    figure_size=(13, 5),
+                )
+                fig = display.fig
                 canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
                 canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -134,6 +149,8 @@ class App():
                 scale.pack(pady=5)
 
             self.chess= chess_result
+
+            
 
 
 
@@ -409,6 +426,14 @@ class App():
         drop = tk.Entry(interpolation_frame, textvariable= self.new_transform_file, width=35)
         drop.pack(pady=5)
 
+        # second-step transform
+        deform_frame = tk.Frame(self.middle_frame)
+        deform_frame.pack(fill=X)
+
+        deform_lbl1 = tk.Label(deform_frame, text="Deformable registration: ", width=22)
+        deform_lbl1.pack(side=LEFT, padx=5, pady=5)
+        def_drop = tk.OptionMenu(deform_frame, self.deform, *registration.deformable_regist)
+        def_drop.pack(pady=(10,5))
 
         # registration button
         run_button = tk.Button(self.middle_frame, text="Run simple registration", padx=10, pady=5, fg="white",
