@@ -120,7 +120,7 @@ class App():
         var = np.average((mids - my_mean) ** 2, weights=n)
         self.std.set(str(np.sqrt(var)))
 
-    def show_results(self, chart_results, color):
+    def show_results_old(self, chart_results, color):
         self.calculate_hist_values(chart_results)
         num_bins = 10
         self.plot1.clear()
@@ -128,6 +128,13 @@ class App():
         #n_2, bins_2, patches_2 = self.plot1.hist(second_chart_results, num_bins, facecolor='blue', alpha=0.5)
         self.canvas.draw()
         self.fig_toolbar.update()
+
+    def show_results(self, x, y):
+        self.plot1.clear()
+        self.plot1.plot(x, y)
+        self.canvas.draw()
+        self.fig_toolbar.update()
+
 
 
     #TODO zwiększyć kontrast szachownicy
