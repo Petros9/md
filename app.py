@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import BOTH, BOTTOM, LEFT, NE, NW, RIGHT, TOP, VERTICAL, X, Y, Canvas, Scrollbar, filedialog, Text
 from matplotlib.figure import Figure
 import math
-
+import numpy as np
 import registration
 from PIL import ImageTk, Image
 import SimpleITK as sitk
@@ -15,7 +15,8 @@ MOV_IDX = 0
 
 points_list = []
 transformed_points_list = []
-chart_results = []
+first_chart_results = []
+second_chart_results =[]
 
 class GradientData:
     def __init__(self) -> None:
@@ -57,7 +58,8 @@ class App():
         self.moving_image = None
         self.chess = None
         self.canvas_res = None
-
+        self.mean = tk.StringVar(value='0')
+        self.std = tk.StringVar(value='0')
         self.build_gui()
 
 
@@ -104,9 +106,21 @@ class App():
         registration.register(self.images[0], self.images[1], self, self.interpolation.get(), self.sampling_percentage.get(), 
                                 self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get())
 
-    def show_results(self, x, y):
+    def calculate_hist_values(self, chart_results):
+        n, bins = np.histogram(chart_results)
+        mids = 0.5 * (bins[1:] + bins[:-1])
+        my_mean = np.average(mids, weights=n)
+
+        self.mean.set(str(my_mean))
+        var = np.average((mids - my_mean) ** 2, weights=n)
+        self.std.set(str(np.sqrt(var)))
+
+    def show_results(self, chart_results, color):
+        self.calculate_hist_values(chart_results)
+        num_bins = 10
         self.plot1.clear()
-        self.plot1.plot(x, y)
+        self.plot1.hist(chart_results, num_bins, facecolor=color, alpha=0.5)
+        #n_2, bins_2, patches_2 = self.plot1.hist(second_chart_results, num_bins, facecolor='blue', alpha=0.5)
         self.canvas.draw()
         self.fig_toolbar.update()
 
@@ -164,7 +178,7 @@ class App():
         i = 0
         while i != len(points_list):
             distance = self.calculate_distance(points_list[i], points_list[i + 1])
-            chart_results.append(distance)
+            first_chart_results.append(distance)
             i = i + 2
 
         fixed_points = points_list[::2]
@@ -172,7 +186,7 @@ class App():
         for point_1 in fixed_points:
             point_2 = transformed_points_list[i]
             distance = self.calculate_distance(point_1, point_2)
-            chart_results.append(distance)
+            second_chart_results.append(distance)
             i = i + 1
     # fixed/moving mhd photo
 
@@ -198,8 +212,8 @@ class App():
         canvas_figure = FigureCanvasTkAgg(fig, master=frame)
         canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.create_distance_list()
-        x = [x for x in range(len(chart_results))]
-        self.show_results(x, chart_results)
+        #x = [x for x in range(len(first_chart_results))]
+        #self.show_results()
 
     def update_moving_image(self, file_name, frame, IDX, point):
         for widget in frame.winfo_children():
@@ -402,16 +416,19 @@ class App():
 
 
         # registration button
-        run_button = tk.Button(self.middle_frame, text="Run simple registration", padx=10, pady=5, fg="white",
+
+        frame1 = tk.Frame(self.middle_frame)
+        frame1.pack(fill=X)
+        run_button = tk.Button(frame1, text="Run simple registration", padx=10, pady=5, fg="white",
                             bg="#263D42", command=self.run_registration)
-        run_button.pack(pady=(10,5))
+        run_button.pack(side=LEFT, pady=(10,5))
 
 
 
-        point_button = tk.Button(self.middle_frame, text="Transform points", padx=10, pady=5, fg="white",
+        point_button = tk.Button(frame1, text="Transform points", padx=10, pady=5, fg="white",
                             bg="#263D42", command=self.draw_moving_image_points)
 
-        point_button.pack(pady=(10,5))
+        point_button.pack(side=RIGHT,pady=(10,5))
         # metrices results
         frame1 = tk.Frame(self.middle_frame)
         frame1.pack(fill=X)
@@ -422,8 +439,37 @@ class App():
         entry1 = tk.Entry(frame1, state='disabled', textvariable=self.metric, width=35)
         entry1.pack(fill=X, padx=5, pady=5, expand=False)
 
+        # hist buttons
+
+        hist_button_frame = tk.Frame(self.middle_frame)
+        hist_button_frame.pack(fill=X)
+        fixed_hist = tk.Button(hist_button_frame, text="Manual hist", padx=10, pady=5, fg="white",
+                                              bg="#263D42", command=lambda: self.show_results(first_chart_results, 'red'))
+
+        trans_hist = tk.Button(hist_button_frame, text="Trans hist", padx=10, pady=5, fg="white",
+                                               bg="#263D42", command=lambda: self.show_results(second_chart_results, 'blue'))
+
+        fixed_hist.pack(side=LEFT, pady=5, padx=20)
+        trans_hist.pack(side=RIGHT, pady=5)
+
 
         #results_info  dziala
+        frame1 = tk.Frame(self.right_frame)
+        frame1.pack(fill=X)
+
+        lbl1 = tk.Label(frame1, text="Mean: ", width=10)
+        lbl1.pack(side=LEFT, padx=3, pady=3)
+
+        entry1 = tk.Entry(frame1, state='disabled', textvariable=self.mean, width=15)
+        entry1.pack(fill=X, padx=3, pady=3, expand=False)
+        frame1 = tk.Frame(self.right_frame)
+        frame1.pack(fill=X)
+        lbl1 = tk.Label(frame1, text="Std: ", width=10)
+        lbl1.pack(side=LEFT, padx=3, pady=3)
+
+        entry1 = tk.Entry(frame1, state='disabled', textvariable=self.std, width=15)
+        entry1.pack(fill=X, padx=3, pady=3, expand=False)
+
         frame1 = tk.Frame(self.right_frame)
         frame1.pack(fill=X)
         self.canvas = FigureCanvasTkAgg(self.res_fig, master=frame1)
@@ -434,7 +480,7 @@ class App():
         self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
 
         self.chess_frame = tk.Frame(self.right_frame, bg='black')
-        self.chess_frame.place(relheight=0.35, relwidth=1, relx=0.05, rely=0.5)
+        self.chess_frame.place(relheight=0.35, relwidth=1, relx=0.05, rely=0.55)
         self.chess_label = tk.Label(self.chess_frame)
         self.chess_label.pack()
 
