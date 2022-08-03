@@ -181,7 +181,6 @@ class App():
     # fixed/moving mhd photo
 
 
-    #TODO zrobic histogramy zamiast wykresu
     def calculate_distance(self, point_1, point_2):
 
         print("  ")
@@ -335,18 +334,18 @@ class App():
         self.right_frame.pack(fill=BOTH, side=RIGHT, pady=(40, 5))
 
 
-        canvas = tk.Canvas(self.left_frame, height=780, width=710, bg="#263D42")
+        canvas = tk.Canvas(self.left_frame, height=850, width=710, bg="#263D42")
        
         # canvas.config(yscrollcommand=vbar.set)
         canvas.pack()
 
         # Fixed frame
         fixed_frame = tk.Frame(self.left_frame, bg="white")
-        fixed_frame.place( relwidth=0.5, relheight=0.30)
+        fixed_frame.place(relwidth=0.5, relheight=0.30)
 
         # Moving frame
         moving_frame = tk.Frame(self.left_frame, bg="white")
-        moving_frame.place( relwidth=0.5, relheight=0.30, relx=0.5, rely=0)
+        moving_frame.place(relwidth=0.5, relheight=0.30, relx=0.5, rely=0)
 
         self.result_frame = tk.Frame(self.left_frame, bg='black')
         self.result_frame.place(relheight=0.7, relwidth=0.45, relx=0.25, rely=0.30)
