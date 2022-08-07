@@ -99,7 +99,6 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     gui.set_metric(registration_method.GetMetricValue())
     combined_isotropic = []
 
-    #TODO przeskalowac obraz roznicowy
     for img in combined:
         original_spacing = img.GetSpacing()
         original_size = img.GetSize()
