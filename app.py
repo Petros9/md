@@ -20,6 +20,8 @@ transformed_points_list = []
 first_chart_results = []
 second_chart_results =[]
 
+HIST_SIZE = 0
+
 class GradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=0.008)
@@ -122,9 +124,9 @@ class App():
 
     def show_results_old(self, chart_results, color):
         self.calculate_hist_values(chart_results)
-        num_bins = 10
+        num_bins = 50
         self.plot1.clear()
-        self.plot1.hist(chart_results, num_bins, facecolor=color, alpha=0.5)
+        self.plot1.hist(chart_results, num_bins, range=(0, max(first_chart_results)), facecolor=color, alpha=0.5)
         #n_2, bins_2, patches_2 = self.plot1.hist(second_chart_results, num_bins, facecolor='blue', alpha=0.5)
         self.canvas.draw()
         self.fig_toolbar.update()
