@@ -121,8 +121,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     next_image_number = format(iteration_number, '03d')
     
     gui.update_result_image(next_image_number)
-    gui.show_chess(fixed, moving_transformed)
-    
+        
     iteration_number += 1
     return moving_transformed
     
@@ -231,7 +230,9 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     x = [x for x in range(iteration_number)]
     y =  results
     
+    gui.show_chess(fixed_image, new_moving)
     gui.show_results(x,y)
+
     if moving_image == moving_2:
         print('TAKIE SAMEEEEE')
     if new_moving == moving_2:
@@ -306,8 +307,9 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     # if second_step == 'deamons':
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
-    save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
+    new_moving = save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
                                      registration_method, gui)
+    gui.show_chess(fixed_image, new_moving)
 
 
     print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))

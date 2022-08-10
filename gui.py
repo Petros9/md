@@ -629,7 +629,7 @@ class MultiImageDisplay(object):
         window_level_list=None,
         intensity_slider_range_percentile=[2, 98],
         figure_size=(10, 8),
-        horizontal=True,
+        horizontal=False,
     ):
 
         self.npa_list, wl_range, wl_init = self.get_window_level_numpy_array(
