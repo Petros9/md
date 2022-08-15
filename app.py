@@ -142,7 +142,7 @@ class App():
     #TODO zwiększyć kontrast szachownicy
     def show_chess(self, fixed, moving):
          #chessboard
-        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [10, 6, 4]))
+        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [15, 10, 4]))
 
         if chess_result is not None:
             IDX = 0
@@ -154,20 +154,20 @@ class App():
             #     plt.imshow(chess_result[int(IDX), :, :], cmap='Greys_r', vmin=self.moving_min_intensity,
             # vmax=self.moving_max_intensity)
 
-
+                itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
                 display = gui.MultiImageDisplay(
                     image_list=[
-                        sitk.CheckerBoard(fixed, moving, [8, 5, 4]),
-                        # sitk.CheckerBoard(img1_2/55, img2_255, (10, 10, 4)),
+                        # sitk.CheckerBoard(fixed, itk_image, [11, 8, 4]),
+                        sitk.CheckerBoard(fixed, moving, (11, 8, 4))
                     ],
-                    title_list=["chessboard"],
+                    title_list=[ 'after'],
                     figure_size=(13, 5),
                 )
                 fig = display.fig
                 canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
                 canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-            update_image(IDX)
+            update_image(0)
 
             if self.chess is None:
                 chess_arr = (chess_result)
