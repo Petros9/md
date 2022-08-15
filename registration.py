@@ -68,7 +68,7 @@ def parse_strategies(method, registration_method):
 
  
 
-def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
+def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui, opt_data):
     global iteration_number
     alpha = 0.1
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
@@ -120,7 +120,8 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     next_image_number = format(iteration_number, '03d')
     
     gui.update_result_image(next_image_number)
-    gui.show_chess(fixed, moving_transformed)
+    if iteration_number == 0 or iteration_number > int(getattr(opt_data, 'numberOfIterations').get()) - 2:
+        gui.show_chess(fixed, moving_transformed)
     
     iteration_number += 1
     return moving_transformed
@@ -221,20 +222,20 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                                        moving_image,
                                                                        transform,
                                                                        'output/iteration', moving_image,
-                                                                       registration_method, gui))
+                                                                       registration_method, gui, opt_data))
     
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
     final_transform = registration_method.Execute(fixed_image, moving_image)
     new_moving = save_combined_central_slice(fixed_image, moving_image,final_transform,'output/iteration', moving_image,
-                                     registration_method, gui)
+                                     registration_method, gui, opt_data)
     x = [x for x in range(iteration_number)]
     y =  results
     
-    gui.show_results(x,y)
-    if moving_image == moving_2:
-        print('TAKIE SAMEEEEE')
-    if new_moving == moving_2:
-        print('aaaaaaaaaa')
+    #gui.show_results(x,y)
+    #if moving_image == moving_2:
+    #    print('TAKIE SAMEEEEE')
+    #if new_moving == moving_2:
+    #    print('aaaaaaaaaa')
 
     #   DEFORMABLE REGISTRATION ####################################################
 
@@ -297,7 +298,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                                        new_moving,
                                                                        transform,
                                                                        'output/iteration', moving_image,
-                                                                       registration_method, gui))
+                                                                       registration_method, gui, opt_data))
     
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, new_moving))
     final_transform = registration_method.Execute(fixed_image, new_moving)
@@ -306,7 +307,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
     save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
-                                     registration_method, gui)
+                                     registration_method, gui, opt_data)
 
 
     print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
