@@ -149,7 +149,7 @@ class App():
                     widget.destroy()
 
                 fig, ax = plt.subplots(figsize=(20, 12))
-                plt.imshow(chess_result[int(IDX), :, :], cmap='gray', vmin=100, vmax=255)
+                plt.imshow(chess_result[int(IDX), :, :], cmap=plt.cm.Greys_r)
 
                 # itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
                 # self.display = gui.MultiImageDisplay(
