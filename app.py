@@ -51,7 +51,7 @@ class App():
         self.interpolation = tk.StringVar(value=registration.interpolation_options[0])
         self.sampling_percentage = tk.StringVar(value='0.01')
         self.sampling_strategy = tk.StringVar(value=registration.sampling_strategies[0])
-        self.bins = tk.IntVar(value=50)
+        self.bins = tk.IntVar(value=10)
         self.optimizer = tk.StringVar(value=registration.optimizers[0])
         self.opt_frame_list = None
         self.transform_file = tk.StringVar(value='(transform file is optional)')
@@ -62,7 +62,7 @@ class App():
         self.moving_image = None
         self.chess = None
         self.canvas_res = None
-        self.deform = tk.StringVar(value=registration.deformable_regist[0])
+        self.deform = tk.StringVar(value=registration.deformable_regist[1])
 
         self.mean = tk.StringVar(value='0')
         self.std = tk.StringVar(value='0')
@@ -180,10 +180,10 @@ class App():
 
 
     def update_result_image(self, number, chess_result=None):
-        self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
-        #print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
+        #self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
+        print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
         
-        self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
+        #self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
 
     # fixed/moving mhd photo
 

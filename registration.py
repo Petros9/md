@@ -120,7 +120,9 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     next_image_number = format(iteration_number, '03d')
     
     gui.update_result_image(next_image_number)
-        
+    if iteration_number == 0 or iteration_number > int(getattr(opt_data, 'numberOfIterations').get()) - 2:
+        gui.show_chess(fixed, moving_transformed)
+    
     iteration_number += 1
     return moving_transformed
     
@@ -231,10 +233,10 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     gui.show_chess(fixed_image, new_moving)
     gui.show_results(x,y)
 
-    # if moving_image == moving_2:
-    #     print('TAKIE SAMEEEEE')
-    # if new_moving == moving_2:
-    #     print('aaaaaaaaaa')
+    if moving_image == moving_2:
+        print('TAKIE SAMEEEEE')
+    if new_moving == moving_2:
+        print('aaaaaaaaaa')
 
     #   DEFORMABLE REGISTRATION ####################################################
     # Determine the number of Bspline control points using the physical spacing we want for the control grid. 
@@ -316,7 +318,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
     new_moving = save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
-                                     registration_method, gui)
+                                     registration_method, gui, opt_data)
     gui.show_chess(fixed_image, new_moving)
 
 
