@@ -25,19 +25,19 @@ HIST_SIZE = 0
 class GradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=0.008)
-        self.numberOfIterations=tk.StringVar(value=100)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.convergenceMinimumValue=tk.StringVar(value=1e-6)
         self.convergenceWindowSize=tk.StringVar(value=20)
 
 class StepGradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=5)
-        self.numberOfIterations=tk.StringVar(value=100)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.minStep=tk.StringVar(value=0.01)
 
 class LBFGSBData:
     def __init__(self) -> None:
-        self.numberOfIterations=tk.StringVar(value=100)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.gradientConvergenceTolerance = tk.StringVar(value="1e-5")
 
 
@@ -479,10 +479,10 @@ class App():
         hist_button_frame = tk.Frame(self.middle_frame)
         hist_button_frame.pack(fill=X)
         fixed_hist = tk.Button(hist_button_frame, text="Manual hist", padx=10, pady=5, fg="white",
-                                              bg="#263D42", command=lambda: self.show_results(first_chart_results, 'red'))
+                                              bg="#263D42", command=lambda: self.show_results_old(first_chart_results, 'red'))
 
         trans_hist = tk.Button(hist_button_frame, text="Trans hist", padx=10, pady=5, fg="white",
-                                               bg="#263D42", command=lambda: self.show_results(second_chart_results, 'blue'))
+                                               bg="#263D42", command=lambda: self.show_results_old(second_chart_results, 'blue'))
 
         fixed_hist.pack(side=LEFT, pady=5, padx=20)
         trans_hist.pack(side=RIGHT, pady=5)
