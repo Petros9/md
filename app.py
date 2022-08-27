@@ -138,11 +138,9 @@ class App():
         self.fig_toolbar.update()
 
 
-
-    #TODO zwiększyć kontrast szachownicy
     def show_chess(self, fixed, moving):
          #chessboard
-        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [15, 10, 4]))
+        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [11, 8, 4]))
 
         if chess_result is not None:
             IDX = 0
@@ -150,20 +148,19 @@ class App():
                 for widget in self.chess_frame.winfo_children():
                     widget.destroy()
 
-            #     fig, ax = plt.subplots(figsize=(20, 12))
-            #     plt.imshow(chess_result[int(IDX), :, :], cmap='Greys_r', vmin=self.moving_min_intensity,
-            # vmax=self.moving_max_intensity)
+                fig, ax = plt.subplots(figsize=(20, 12))
+                plt.imshow(chess_result[int(IDX), :, :], cmap=plt.cm.Greys_r)
 
-                itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
-                display = gui.MultiImageDisplay(
-                    image_list=[
-                        # sitk.CheckerBoard(fixed, itk_image, [11, 8, 4]),
-                        sitk.CheckerBoard(fixed, moving, (11, 8, 4))
-                    ],
-                    title_list=[ 'after'],
-                    figure_size=(13, 5),
-                )
-                fig = display.fig
+                # itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
+                # self.display = gui.MultiImageDisplay(
+                #     image_list=[
+                #         sitk.CheckerBoard(fixed, itk_image, [11, 8, 4]),
+                #         sitk.CheckerBoard(fixed, moving, (11, 8, 4))
+                #     ],
+                #     title_list=['before', 'after'],
+                #     figure_size=(13, 5),
+                # )
+                # fig = self.display.fig
                 canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
                 canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -171,6 +168,7 @@ class App():
 
             if self.chess is None:
                 chess_arr = (chess_result)
+                # scale = self.display.slicer_box
                 scale = tk.Scale(self.right_frame, from_=0, to=len(chess_arr) - 1, label="Chessboard", length=len(chess_arr), orient='horizontal',
                                 command=update_image)
                 scale.pack(pady=5)

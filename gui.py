@@ -624,7 +624,7 @@ class MultiImageDisplay(object):
         self,
         image_list,
         axis=0,
-        shared_slider=False,
+        shared_slider=True,
         title_list=None,
         window_level_list=None,
         intensity_slider_range_percentile=[2, 98],
@@ -648,6 +648,7 @@ class MultiImageDisplay(object):
 
         ui = self.create_ui(shared_slider, wl_range, wl_init)
         display(ui)
+        self.ui = ui
 
         # Create a figure.
         col_num, row_num = (len(image_list), 1) if horizontal else (1, len(image_list))
@@ -710,6 +711,7 @@ class MultiImageDisplay(object):
                 slider.observe(self.on_slice_slider_value_change, names="value")
                 self.slider_list.append(slider)
             slicer_box = widgets.Box(padding=7, children=self.slider_list)
+        self.slicer_box = slicer_box
         self.wl_list = []
         # Each image has a window-level slider, but it is disabled if the image
         # is a color image len(npa.shape)==4 . This allows us to display both

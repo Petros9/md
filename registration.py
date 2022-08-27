@@ -68,7 +68,7 @@ def parse_strategies(method, registration_method):
 
  
 
-def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui):
+def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui, opt_data):
     global iteration_number
     alpha = 0.1
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
@@ -160,25 +160,9 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                   sitk.Euler3DTransform(),
                                                   sitk.CenteredTransformInitializerFilter.GEOMETRY)
 
-    grid_physical_spacing = [50.0, 50.0, 50.0]  # A control point every 50mm
-    image_physical_size = [
-        size * spacing
-        for size, spacing in zip(fixed_image.GetSize(), fixed_image.GetSpacing())
-    ]
-    mesh_size = [
-        int(image_size / grid_spacing + 0.5)
-        for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)
-    ]
-
-    ffd_transform = sitk.BSplineTransformInitializer(
-        image1=fixed_image, transformDomainMeshSize=mesh_size, order=3
-    )
-
-
 
     #  rigid registration using Mutual Information
     registration_method = sitk.ImageRegistrationMethod()
-    # registration_method.SetMetricAsMeanSquares()
     registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=bins)
     registration_method.SetMetricSamplingStrategy(parse_strategies(sampling_strategy, registration_method))
     registration_method.SetMetricSamplingPercentage(float(sampling_percent))
@@ -211,7 +195,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     registration_method.SetOptimizerScalesFromPhysicalShift()
 
-    # transform = initial_transform
+   
     registration_method.SetInitialTransform(transform, inPlace=True)
 
     # add iteration callback, save central slice in xy, xz, yz planes
@@ -222,28 +206,20 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                                        moving_image,
                                                                        transform,
                                                                        'output/iteration', moving_image,
-                                                                       registration_method, gui))
+                                                                       registration_method, gui, opt_data))
     
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
-    final_transform = registration_method.Execute(fixed_image, moving_image)
-    new_moving = save_combined_central_slice(fixed_image, moving_image,final_transform,'output/iteration', moving_image,
-                                     registration_method, gui)
+    nonrigid_transform = registration_method.Execute(fixed_image, moving_image)
+    new_moving = save_combined_central_slice(fixed_image, moving_image,nonrigid_transform,'output/iteration', moving_image,
+                                     registration_method, gui, opt_data)
     x = [x for x in range(iteration_number)]
     y =  results
     
-    #gui.show_results(x,y)
-    #if moving_image == moving_2:
-    #    print('TAKIE SAMEEEEE')
-    #if new_moving == moving_2:
-    #    print('aaaaaaaaaa')
+    gui.show_chess(fixed_image, new_moving)
+    gui.show_results(x,y)
+
 
     #   DEFORMABLE REGISTRATION ####################################################
-
-    # multi-resolution
-    # registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1])
-    # registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
-    # registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
-
     # Determine the number of Bspline control points using the physical spacing we want for the control grid. 
     if second_step == 'BSpline':
         grid_physical_spacing = [50.0, 50.0, 50.0] # A control point every 50mm
@@ -251,9 +227,9 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
         mesh_size = [int(image_size/grid_spacing + 0.5) \
                     for image_size,grid_spacing in zip(image_physical_size,grid_physical_spacing)]
 
-        transform = sitk.BSplineTransformInitializer(image1 = fixed_image, 
+        transform2 = sitk.BSplineTransformInitializer(image1 = fixed_image, 
                                                 transformDomainMeshSize = mesh_size, order=3)
-        print(f"Initial Number of Parameters: {transform.GetNumberOfParameters()}")
+        print(f"Initial Number of Parameters: {transform2.GetNumberOfParameters()}")
 
         # R = sitk.ImageRegistrationMethod()
         # R.SetMetricAsMattesMutualInformation(50)
@@ -264,45 +240,63 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
         # R.SetInterpolator(sitk.sitkLinear)
 
-        registration_method.SetInitialTransformAsBSpline(transform, inPlace=True, scaleFactors=[1, 2, 5])
-       
 
-    elif second_step=='deamons':
+        # compo_transform.AddTransform(transform2)
+        registration_method.SetMovingInitialTransform(nonrigid_transform)
+        registration_method.SetInitialTransformAsBSpline(transform2, inPlace=True, scaleFactors=[1, 2, 5])
+        # combined_transform = compo_transform       
+
+    elif second_step=='daemons':
         print('deamons')
         # registration_method = sitk.ImageRegistrationMethod()
         transform_to_displacment_field_filter = sitk.TransformToDisplacementFieldFilter()
         transform_to_displacment_field_filter.SetReferenceImage(fixed_image)
-        transform = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter.Execute(sitk.Transform()))
+        transform2 = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter.Execute(sitk.Transform()))
 
-        # registration_method = sitk.FastSymmetricForcesDemonsRegistrationFilter()
-        # registration_method.SetNumberOfIterations(int(getattr(opt_data, 'numberOfIterations').get()))
-        # # Standard deviation for Gaussian smoothing of displacement field
-        # registration_method.SetStandardDeviations(1.0)
+        nonrigid_transform = sitk.TransformToDisplacementField(nonrigid_transform)
+        # transform_to_displacment_field_filter2 = sitk.TransformToDisplacementFieldFilter()
+        # transform_to_displacment_field_filter2.SetReferenceImage(fixed_image)
+        # transform = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter2.Execute(transform))
+
 
         # initial_transform = sitk.DisplacementFieldTransform(final_transform)
-        transform.SetSmoothingGaussianOnUpdate(
+        transform2.SetSmoothingGaussianOnUpdate(
             varianceForUpdateField=0.0, varianceForTotalField=2.0)
 
-        registration_method.SetInitialTransform(transform)
+        # registration_method.SetInitialTransform(transform)
+        registration_method.SetMovingInitialTransform(nonrigid_transform)
         registration_method.SetMetricAsDemons(10)
+        registration_method.SetInitialTransform(transform2, inPlace=True)
+        # combined_transform = transform2
 
-    elif second_step =='SMS':
-        pass
+    # elif second_step =='SMS':
+    #     pass
 
+    # compo_transform = sitk.CompositeTransform(transform2) #second done 
+    # compo_transform.AddTransform(transform) #first done
+   
+    # if second_step == 'BSpline':
+    #     registration_method.SetInitialTransformAsBSpline(compo_transform, scaleFactors=[1, 2, 5])
+    # else:
+    #     registration_method.SetInitialTransform(compo_transform)
 
     registration_method.SetShrinkFactorsPerLevel([4, 2, 1])
-    registration_method.SetSmoothingSigmasPerLevel([2, 1, 0])
+    registration_method.SetNumberOfThreads(3)
+    registration_method.SetSmoothingSigmasPerLevel([8, 4, 0])
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
     registration_method.AddCommand(sitk.sitkIterationEvent,
                                    lambda: save_combined_central_slice(fixed_image,
-                                                                       new_moving,
-                                                                       transform,
+                                                                       moving_image,
+                                                                       transform2,
                                                                        'output/iteration', moving_image,
-                                                                       registration_method, gui))
+                                                                       registration_method, gui, opt_data))
     
-    print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, new_moving))
-    final_transform = registration_method.Execute(fixed_image, new_moving)
+    print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
 
+    
+    final_transform = registration_method.Execute(fixed_image, moving_image)
+    final_transform = sitk.CompositeTransform([nonrigid_transform, final_transform])
+    
     # if second_step == 'deamons':
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
