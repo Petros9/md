@@ -1,9 +1,11 @@
 import os
 import tkinter as tk
-from tkinter import BOTH, BOTTOM, LEFT, RIGHT, TOP, X, filedialog, Text
+from tkinter import BOTH, BOTTOM, LEFT, NE, NW, RIGHT, TOP, VERTICAL, X, Y, Canvas, Scrollbar, filedialog, Text
 from matplotlib.figure import Figure
 import math
+import gui
 
+import numpy as np
 import registration
 from PIL import ImageTk, Image
 import SimpleITK as sitk
@@ -15,24 +17,27 @@ MOV_IDX = 0
 
 points_list = []
 transformed_points_list = []
-chart_results = []
+first_chart_results = []
+second_chart_results =[]
+
+HIST_SIZE = 0
 
 class GradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=0.008)
-        self.numberOfIterations=tk.StringVar(value=100)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.convergenceMinimumValue=tk.StringVar(value=1e-6)
         self.convergenceWindowSize=tk.StringVar(value=20)
 
 class StepGradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=5)
-        self.numberOfIterations=tk.StringVar(value=100)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.minStep=tk.StringVar(value=0.01)
 
 class LBFGSBData:
     def __init__(self) -> None:
-        self.numberOfIterations=tk.StringVar(value=100)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.gradientConvergenceTolerance = tk.StringVar(value="1e-5")
 
 
@@ -44,18 +49,24 @@ class App():
         self.metric = tk.StringVar()#(self.root, value='run registration to see results')
         self.metric.set('run registration to see results')
         self.interpolation = tk.StringVar(value=registration.interpolation_options[0])
-        self.sampling_percentage = tk.StringVar(value='0.1')
+        self.sampling_percentage = tk.StringVar(value='0.01')
         self.sampling_strategy = tk.StringVar(value=registration.sampling_strategies[0])
-        self.bins = tk.IntVar(value=50)
+        self.bins = tk.IntVar(value=10)
         self.optimizer = tk.StringVar(value=registration.optimizers[0])
         self.opt_frame_list = None
         self.transform_file = tk.StringVar(value='(transform file is optional)')
         self.new_transform_file = tk.StringVar(value='output/ct2mrT1')
         self.res_fig = Figure(figsize = (4, 3), dpi = 100)
         self.plot1 = self.res_fig.add_subplot(111)
-        self.build_gui()
         self.moving_frame = None
         self.moving_image = None
+        self.chess = None
+        self.canvas_res = None
+        self.deform = tk.StringVar(value=registration.deformable_regist[1])
+
+        self.mean = tk.StringVar(value='0')
+        self.std = tk.StringVar(value='0')
+        self.build_gui()
 
 
     def transform_point(self, point):
@@ -79,15 +90,46 @@ class App():
 
     def run_registration(self):
         # image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"\\output\\iteration000.jpg"))
-        self.result_label = tk.Label(self.result_frame)
-        self.result_label.pack()
+        if self.canvas_res == None:
+            self.canvas_res = Canvas(self.result_frame, bg="Black", width=self.result_frame.winfo_width(), height=self.result_frame.winfo_height())
+            self.canvas_res.pack()
+
+            self.result_label = tk.Label(self.canvas_res)
+            self.canvas_res.create_window(0, 0, window=self.result_label, anchor=NW)
+
+            vbar=Scrollbar(self.canvas_res, orient=VERTICAL, command=self.canvas_res.yview)
+        # vbar.pack(side=RIGHT,fill=Y)
+            vbar.place(relx=1, rely=0, relheight=1, anchor=NE)
+            self.canvas_res.config(yscrollcommand=vbar.set, scrollregion=(0, 0, 0, 900))
+
+        # self.result_label.pack(expand=True)
+        # self.chess = 0
 
         if float(self.sampling_percentage.get()) > 1:
             self.sampling_percentage.set('1.0')
         
         self.metric.set('initializing registration...')
         registration.register(self.images[0], self.images[1], self, self.interpolation.get(), self.sampling_percentage.get(), 
-                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get())
+                                self.sampling_strategy.get(), self.bins.get(), self.optimizer.get(), self.opt_data, self.new_transform_file.get(),
+                                self.deform.get())
+
+    def calculate_hist_values(self, chart_results):
+        n, bins = np.histogram(chart_results)
+        mids = 0.5 * (bins[1:] + bins[:-1])
+        my_mean = np.average(mids, weights=n)
+
+        self.mean.set(str(my_mean))
+        var = np.average((mids - my_mean) ** 2, weights=n)
+        self.std.set(str(np.sqrt(var)))
+
+    def show_results_old(self, chart_results, color):
+        self.calculate_hist_values(chart_results)
+        num_bins = 50
+        self.plot1.clear()
+        self.plot1.hist(chart_results, num_bins, range=(0, max(first_chart_results)), facecolor=color, alpha=0.5)
+        #n_2, bins_2, patches_2 = self.plot1.hist(second_chart_results, num_bins, facecolor='blue', alpha=0.5)
+        self.canvas.draw()
+        self.fig_toolbar.update()
 
     def show_results(self, x, y):
         self.plot1.clear()
@@ -96,11 +138,54 @@ class App():
         self.fig_toolbar.update()
 
 
-    def update_result_image(self, number):
-        self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
-        #print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
+    def show_chess(self, fixed, moving):
+         #chessboard
+        chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [11, 8, 4]))
+
+        if chess_result is not None:
+            IDX = 0
+            def update_image(IDX):
+                for widget in self.chess_frame.winfo_children():
+                    widget.destroy()
+
+                fig, ax = plt.subplots(figsize=(20, 12))
+                plt.imshow(chess_result[int(IDX), :, :], cmap=plt.cm.Greys_r)
+
+                # itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
+                # self.display = gui.MultiImageDisplay(
+                #     image_list=[
+                #         sitk.CheckerBoard(fixed, itk_image, [11, 8, 4]),
+                #         sitk.CheckerBoard(fixed, moving, (11, 8, 4))
+                #     ],
+                #     title_list=['before', 'after'],
+                #     figure_size=(13, 5),
+                # )
+                # fig = self.display.fig
+                canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
+                canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+            update_image(0)
+
+            if self.chess is None:
+                chess_arr = (chess_result)
+                # scale = self.display.slicer_box
+                scale = tk.Scale(self.right_frame, from_=0, to=len(chess_arr) - 1, label="Chessboard", length=len(chess_arr), orient='horizontal',
+                                command=update_image)
+                scale.pack(pady=5)
+
+            self.chess = chess_result
+
+            
+
+
+
+    def update_result_image(self, number, chess_result=None):
+        #self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
+        print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
         
-        self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
+        #self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
+
+    # fixed/moving mhd photo
 
 
     def calculate_distance(self, point_1, point_2):
@@ -118,7 +203,7 @@ class App():
         i = 0
         while i != len(points_list):
             distance = self.calculate_distance(points_list[i], points_list[i + 1])
-            chart_results.append(distance)
+            first_chart_results.append(distance)
             i = i + 2
 
         fixed_points = points_list[::2]
@@ -126,7 +211,7 @@ class App():
         for point_1 in fixed_points:
             point_2 = transformed_points_list[i]
             distance = self.calculate_distance(point_1, point_2)
-            chart_results.append(distance)
+            second_chart_results.append(distance)
             i = i + 1
     # fixed/moving mhd photo
 
@@ -152,8 +237,8 @@ class App():
         canvas_figure = FigureCanvasTkAgg(fig, master=frame)
         canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.create_distance_list()
-        x = [x for x in range(len(chart_results))]
-        self.show_results(x, chart_results)
+        #x = [x for x in range(len(first_chart_results))]
+        #self.show_results()
 
     def update_moving_image(self, file_name, frame, IDX, point):
         for widget in frame.winfo_children():
@@ -256,19 +341,21 @@ class App():
         self.right_frame.pack(fill=BOTH, side=RIGHT, pady=(40, 5))
 
 
-        canvas = tk.Canvas(self.left_frame, height=900, width=700, bg="#263D42")
+        canvas = tk.Canvas(self.left_frame, height=850, width=710, bg="#263D42")
+       
+        # canvas.config(yscrollcommand=vbar.set)
         canvas.pack()
 
         # Fixed frame
         fixed_frame = tk.Frame(self.left_frame, bg="white")
-        fixed_frame.place( relwidth=0.5, relheight=0.30)
+        fixed_frame.place(relwidth=0.5, relheight=0.30)
 
         # Moving frame
         moving_frame = tk.Frame(self.left_frame, bg="white")
-        moving_frame.place( relwidth=0.5, relheight=0.30, relx=0.5, rely=0)
+        moving_frame.place(relwidth=0.5, relheight=0.30, relx=0.5, rely=0)
 
         self.result_frame = tk.Frame(self.left_frame, bg='black')
-        self.result_frame.place(relheight=0.7, relwidth=0.5, relx=0.25, rely=0.30)
+        self.result_frame.place(relheight=0.7, relwidth=0.45, relx=0.25, rely=0.30)
 
 
         # buttons
@@ -352,18 +439,29 @@ class App():
         drop = tk.Entry(interpolation_frame, textvariable= self.new_transform_file, width=35)
         drop.pack(pady=5)
 
+        # second-step transform
+        deform_frame = tk.Frame(self.middle_frame)
+        deform_frame.pack(fill=X)
+
+        deform_lbl1 = tk.Label(deform_frame, text="Deformable registration: ", width=22)
+        deform_lbl1.pack(side=LEFT, padx=5, pady=5)
+        def_drop = tk.OptionMenu(deform_frame, self.deform, *registration.deformable_regist)
+        def_drop.pack(pady=(10,5))
 
         # registration button
-        run_button = tk.Button(self.middle_frame, text="Run simple registration", padx=10, pady=5, fg="white",
+
+        frame1 = tk.Frame(self.middle_frame)
+        frame1.pack(fill=X)
+        run_button = tk.Button(frame1, text="Run simple registration", padx=10, pady=5, fg="white",
                             bg="#263D42", command=self.run_registration)
-        run_button.pack(pady=(10,5))
+        run_button.pack(side=LEFT, pady=(10,5))
 
 
 
-        point_button = tk.Button(self.middle_frame, text="Transform points", padx=10, pady=5, fg="white",
+        point_button = tk.Button(frame1, text="Transform points", padx=10, pady=5, fg="white",
                             bg="#263D42", command=self.draw_moving_image_points)
 
-        point_button.pack(pady=(10,5))
+        point_button.pack(side=RIGHT,pady=(10,5))
         # metrices results
         frame1 = tk.Frame(self.middle_frame)
         frame1.pack(fill=X)
@@ -374,28 +472,63 @@ class App():
         entry1 = tk.Entry(frame1, state='disabled', textvariable=self.metric, width=35)
         entry1.pack(fill=X, padx=5, pady=5, expand=False)
 
+        # hist buttons
+
+        hist_button_frame = tk.Frame(self.middle_frame)
+        hist_button_frame.pack(fill=X)
+        fixed_hist = tk.Button(hist_button_frame, text="Manual hist", padx=10, pady=5, fg="white",
+                                              bg="#263D42", command=lambda: self.show_results_old(first_chart_results, 'red'))
+
+        trans_hist = tk.Button(hist_button_frame, text="Trans hist", padx=10, pady=5, fg="white",
+                                               bg="#263D42", command=lambda: self.show_results_old(second_chart_results, 'blue'))
+
+        fixed_hist.pack(side=LEFT, pady=5, padx=20)
+        trans_hist.pack(side=RIGHT, pady=5)
+
 
         #results_info  dziala
         frame1 = tk.Frame(self.right_frame)
         frame1.pack(fill=X)
-        self.canvas = FigureCanvasTkAgg(self.res_fig, master = frame1)  
+
+        lbl1 = tk.Label(frame1, text="Mean: ", width=10)
+        lbl1.pack(side=LEFT, padx=3, pady=3)
+
+        entry1 = tk.Entry(frame1, state='disabled', textvariable=self.mean, width=15)
+        entry1.pack(fill=X, padx=3, pady=3, expand=False)
+        frame1 = tk.Frame(self.right_frame)
+        frame1.pack(fill=X)
+        lbl1 = tk.Label(frame1, text="Std: ", width=10)
+        lbl1.pack(side=LEFT, padx=3, pady=3)
+
+        entry1 = tk.Entry(frame1, state='disabled', textvariable=self.std, width=15)
+        entry1.pack(fill=X, padx=3, pady=3, expand=False)
+
+        frame1 = tk.Frame(self.right_frame)
+        frame1.pack(fill=X)
+        self.canvas = FigureCanvasTkAgg(self.res_fig, master=frame1)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
         self.fig_toolbar = NavigationToolbar2Tk(self.canvas, frame1)
         self.fig_toolbar.update()
         self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
 
-
-        frame2= tk.Frame(self.right_frame)
-        frame2.pack(fill=X)
-        self.canvas = FigureCanvasTkAgg(self.res_fig, master = frame2)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
-        self.fig_toolbar = NavigationToolbar2Tk(self.canvas, frame2)
-        self.fig_toolbar.update()
-        self.canvas.get_tk_widget().pack(fill=X, side=TOP, padx=5, pady=5)
+        self.chess_frame = tk.Frame(self.right_frame, bg='black')
+        self.chess_frame.place(relheight=0.35, relwidth=1, relx=0.05, rely=0.55)
+        self.chess_label = tk.Label(self.chess_frame)
+        self.chess_label.pack()
 
         self.root.mainloop()
+
+    # def display_chessboard(self,img2=None):
+    #     guig.MultiImageDisplay(
+    #         image_list=[
+    #             sitk.CheckerBoard(self.images[0], self.images[1], [4, 4, 4])
+    #             # sitk.CheckerBoard(img1_255, img2_255, (10, 10, 4)),
+    #         ],
+    #         title_list=["original intensities"],
+    #         figure_size=(9, 3),
+    #     )
+
 
 
     def set_metric(self, value):
