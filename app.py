@@ -140,6 +140,7 @@ class App():
 
     def show_chess(self, fixed, moving):
          #chessboard
+        from PIL import Image
         chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [11, 8, 4]))
 
         if chess_result is not None:
@@ -149,7 +150,9 @@ class App():
                     widget.destroy()
 
                 fig, ax = plt.subplots(figsize=(20, 12))
-                plt.imshow(chess_result[int(IDX), :, :], cmap=plt.cm.Greys_r)
+                img = chess_result[int(IDX), :, :]
+                # img=Image.fromarray(img).convert('L')
+                plt.imshow(img, cmap=plt.cm.Greys_r)
 
                 # itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
                 # self.display = gui.MultiImageDisplay(
