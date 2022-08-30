@@ -120,8 +120,8 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     next_image_number = format(iteration_number, '03d')
     
     gui.update_result_image(next_image_number)
-    if iteration_number == 0 or iteration_number > int(getattr(opt_data, 'numberOfIterations').get()) - 2:
-        gui.show_chess(fixed, moving_transformed)
+    #if iteration_number == 0 or iteration_number > int(getattr(opt_data, 'numberOfIterations').get()) - 2:
+    #    gui.show_chess(fixed, moving_transformed)
     
     iteration_number += 1
     return moving_transformed
@@ -301,7 +301,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
     new_moving = save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
-                                     registration_method, gui, opt_data)
+                                     registration_method, gui)
     gui.show_chess(fixed_image, new_moving)
 
 
@@ -309,7 +309,7 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     # gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
-    sitk.WriteTransform(final_transform, transform_file+'.tfm') 
+    sitk.WriteTransform(final_transform, transform_file+'.tfm')
     x = [x for x in range(iteration_number)]
     y =  results
 
