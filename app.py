@@ -7,7 +7,7 @@ import gui
 
 import numpy as np
 import registration
-from PIL import ImageTk, Image
+# from PIL import ImageTk, Image
 import SimpleITK as sitk
 import matplotlib.pylab as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -25,19 +25,19 @@ HIST_SIZE = 0
 class GradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=0.008)
-        self.numberOfIterations=tk.StringVar(value=50)
+        self.numberOfIterations=tk.StringVar(value=10)
         self.convergenceMinimumValue=tk.StringVar(value=1e-6)
         self.convergenceWindowSize=tk.StringVar(value=20)
 
 class StepGradientData:
     def __init__(self) -> None:
         self.learningRate=tk.StringVar(value=5)
-        self.numberOfIterations=tk.StringVar(value=50)
+        self.numberOfIterations=tk.StringVar(value=10)
         self.minStep=tk.StringVar(value=0.01)
 
 class LBFGSBData:
     def __init__(self) -> None:
-        self.numberOfIterations=tk.StringVar(value=50)
+        self.numberOfIterations=tk.StringVar(value=10)
         self.gradientConvergenceTolerance = tk.StringVar(value="1e-5")
 
 
@@ -66,6 +66,7 @@ class App():
 
         self.mean = tk.StringVar(value='0')
         self.std = tk.StringVar(value='0')
+        self.chess_frame = None
         self.build_gui()
 
 
@@ -143,7 +144,7 @@ class App():
         from PIL import Image
         chess_result = sitk.GetArrayFromImage(sitk.CheckerBoard(fixed, moving, [11, 8, 4]))
 
-        if chess_result is not None:
+        if chess_result is not None and self.chess_frame is not None:
             IDX = 0
             def update_image(IDX):
                 for widget in self.chess_frame.winfo_children():
@@ -152,7 +153,7 @@ class App():
                 fig, ax = plt.subplots(figsize=(20, 12))
                 img = chess_result[int(IDX), :, :]
                 # img=Image.fromarray(img).convert('L')
-                plt.imshow(img, cmap=plt.cm.Greys_r)
+                plt.imshow(img, cmap='gray_r')
 
                 # itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
                 # self.display = gui.MultiImageDisplay(
@@ -522,24 +523,10 @@ class App():
 
         self.root.mainloop()
 
-    # def display_chessboard(self,img2=None):
-    #     guig.MultiImageDisplay(
-    #         image_list=[
-    #             sitk.CheckerBoard(self.images[0], self.images[1], [4, 4, 4])
-    #             # sitk.CheckerBoard(img1_255, img2_255, (10, 10, 4)),
-    #         ],
-    #         title_list=["original intensities"],
-    #         figure_size=(9, 3),
-    #     )
-
 
 
     def set_metric(self, value):
         self.metric.set(value)
-
-    # def set_results_text(self, text):
-    #     self.results_text.delete('1.0', 'end')
-    #     self.results_text.insert('1.0', text)
 
 
 

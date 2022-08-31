@@ -70,7 +70,7 @@ def parse_strategies(method, registration_method):
 
 def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui, opt_data):
     global iteration_number
-    alpha = 0.1
+    alpha = 0.9
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
     moving_transformed = sitk.Resample(moving, fixed, transform,
@@ -139,6 +139,8 @@ def register(fixed_image_name, moving_image_name, gui, interpolation_method, sam
                         sampling_strategy, bins, optimalizer, opt_data, transform_file, second_step))
     final_transform = new_thread.start()
 
+    # registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method,sampling_percent,
+    #                     sampling_strategy, bins, optimalizer, opt_data, transform_file, second_step)
     # print(results)
     # return 
    
@@ -153,7 +155,6 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
       # read the images
     fixed_image = sitk.ReadImage(fixed_image_name, sitk.sitkFloat32)
     moving_image = sitk.ReadImage(moving_image_name, sitk.sitkFloat32)
-    moving_2 = copy(moving_image)
 
     transform = sitk.CenteredTransformInitializer(fixed_image,
                                                   moving_image,
@@ -209,14 +210,15 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                                        registration_method, gui, opt_data))
     
     print("Initial metric: ", registration_method.MetricEvaluate(fixed_image, moving_image))
+    # nonrigid_transform = transform
     nonrigid_transform = registration_method.Execute(fixed_image, moving_image)
     new_moving = save_combined_central_slice(fixed_image, moving_image,nonrigid_transform,'output/iteration', moving_image,
                                      registration_method, gui, opt_data)
     x = [x for x in range(iteration_number)]
     y =  results
     
-    gui.show_chess(fixed_image, new_moving)
-    gui.show_results(x,y)
+    # gui.show_chess(fixed_image, new_moving)
+    # gui.show_results(x,y)
 
 
     #   DEFORMABLE REGISTRATION ####################################################
@@ -253,10 +255,10 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
         transform_to_displacment_field_filter.SetReferenceImage(fixed_image)
         transform2 = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter.Execute(sitk.Transform()))
 
-        nonrigid_transform = sitk.TransformToDisplacementField(nonrigid_transform)
-        # transform_to_displacment_field_filter2 = sitk.TransformToDisplacementFieldFilter()
-        # transform_to_displacment_field_filter2.SetReferenceImage(fixed_image)
-        # transform = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter2.Execute(transform))
+        # nonrigid_transform = sitk.TransformToDisplacementField(nonrigid_transform)
+        transform_to_displacment_field_filter2 = sitk.TransformToDisplacementFieldFilter()
+        transform_to_displacment_field_filter2.SetReferenceImage(fixed_image)
+        nonrigid_transform = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter2.Execute(nonrigid_transform))
 
 
         # initial_transform = sitk.DisplacementFieldTransform(final_transform)
@@ -269,8 +271,6 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
         registration_method.SetInitialTransform(transform2, inPlace=True)
         # combined_transform = transform2
 
-    # elif second_step =='SMS':
-    #     pass
 
     # compo_transform = sitk.CompositeTransform(transform2) #second done 
     # compo_transform.AddTransform(transform) #first done
@@ -280,8 +280,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     # else:
     #     registration_method.SetInitialTransform(compo_transform)
 
+    registration_method.SetNumberOfThreads(16)
     registration_method.SetShrinkFactorsPerLevel([4, 2, 1])
-    registration_method.SetNumberOfThreads(3)
     registration_method.SetSmoothingSigmasPerLevel([8, 4, 0])
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
     registration_method.AddCommand(sitk.sitkIterationEvent,
@@ -295,13 +295,15 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     
     final_transform = registration_method.Execute(fixed_image, moving_image)
-    final_transform = sitk.CompositeTransform([nonrigid_transform, final_transform])
+    # final_transform = sitk.CompositeTransform([nonrigid_transform, final_transform])
+    final_transform = sitk.CompositeTransform(final_transform) #second done 
+    final_transform.AddTransform(nonrigid_transform) #first done
     
     # if second_step == 'deamons':
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
     new_moving = save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
-                                     registration_method, gui)
+                                     registration_method, gui, opt_data)
     gui.show_chess(fixed_image, new_moving)
 
 
@@ -309,12 +311,12 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     # gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
     # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
-    sitk.WriteTransform(final_transform, transform_file+'.tfm')
     x = [x for x in range(iteration_number)]
     y =  results
 
-    
     gui.show_results(x,y)
+    sitk.WriteTransform(final_transform, transform_file+'.tfm')
+    
     
 
 
