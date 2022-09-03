@@ -70,7 +70,7 @@ def parse_strategies(method, registration_method):
 
 def save_combined_central_slice(fixed, moving, transform, file_name_prefix, moving_image, registration_method, gui, opt_data):
     global iteration_number
-    alpha = 0.9
+    alpha = 0.5
     central_indexes = [int(i / 2) for i in fixed.GetSize()]
 
     moving_transformed = sitk.Resample(moving, fixed, transform,
@@ -84,13 +84,20 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     #             fixed[central_indexes[0], :, :] + -
     #             moving_transformed[central_indexes[0], :, :]]
 
-    combined = [(1.0 - alpha)*fixed[:,:,central_indexes[2]] + \
-                   alpha*moving_transformed[:,:,central_indexes[2]],
-                  (1.0 - alpha)*fixed[:,central_indexes[1],:] + \
-                  alpha*moving_transformed[:,central_indexes[1],:],
-                  (1.0 - alpha)*fixed[central_indexes[0],:,:] + \
-                  alpha*moving_transformed[central_indexes[0],:,:]]
+    # combined = [(1.0 - alpha)*fixed[:,:,central_indexes[2]] + \
+    #                alpha*moving_transformed[:,:,central_indexes[2]],
+    #               (1.0 - alpha)*fixed[:,central_indexes[1],:] + \
+    #               alpha*moving_transformed[:,central_indexes[1],:],
+    #               (1.0 - alpha)*fixed[central_indexes[0],:,:] + \
+    #               alpha*moving_transformed[central_indexes[0],:,:]]
     
+    combined = [fixed[:, :, central_indexes[2]] + -
+    moving_transformed[:, :, central_indexes[2]],
+                fixed[:, central_indexes[1], :] + -
+                moving_transformed[:, central_indexes[1], :],
+                fixed[central_indexes[0], :, :] + -
+                moving_transformed[central_indexes[0], :, :]]
+
     # resample the alpha blended images to be isotropic and rescale intensity
     # values so that they are in [0,255], this satisfies the requirements
     # of the jpg format
@@ -217,8 +224,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     x = [x for x in range(iteration_number)]
     y =  results
     
-    # gui.show_chess(fixed_image, new_moving)
-    # gui.show_results(x,y)
+    gui.show_chess(fixed_image, new_moving)
+    gui.show_results(x,y)
 
 
     #   DEFORMABLE REGISTRATION ####################################################
@@ -263,17 +270,17 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
         # initial_transform = sitk.DisplacementFieldTransform(final_transform)
         transform2.SetSmoothingGaussianOnUpdate(
-            varianceForUpdateField=0.0, varianceForTotalField=2.0)
+            varianceForUpdateField=1.75, varianceForTotalField=0.5)
 
         # registration_method.SetInitialTransform(transform)
         registration_method.SetMovingInitialTransform(nonrigid_transform)
-        registration_method.SetMetricAsDemons(10)
+        registration_method.SetMetricAsDemons(0.001)
         registration_method.SetInitialTransform(transform2, inPlace=True)
         # combined_transform = transform2
 
 
-    # compo_transform = sitk.CompositeTransform(transform2) #second done 
-    # compo_transform.AddTransform(transform) #first done
+    compo_transform = sitk.CompositeTransform(transform2) #second done 
+    compo_transform.AddTransform(nonrigid_transform) #first done
    
     # if second_step == 'BSpline':
     #     registration_method.SetInitialTransformAsBSpline(compo_transform, scaleFactors=[1, 2, 5])
@@ -282,12 +289,12 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     registration_method.SetNumberOfThreads(16)
     registration_method.SetShrinkFactorsPerLevel([4, 2, 1])
-    registration_method.SetSmoothingSigmasPerLevel([8, 4, 0])
+    registration_method.SetSmoothingSigmasPerLevel([2, 1, 0])
     registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
     registration_method.AddCommand(sitk.sitkIterationEvent,
                                    lambda: save_combined_central_slice(fixed_image,
                                                                        moving_image,
-                                                                       transform2,
+                                                                       compo_transform,
                                                                        'output/iteration', moving_image,
                                                                        registration_method, gui, opt_data))
     

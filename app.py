@@ -24,8 +24,8 @@ HIST_SIZE = 0
 
 class GradientData:
     def __init__(self) -> None:
-        self.learningRate=tk.StringVar(value=0.008)
-        self.numberOfIterations=tk.StringVar(value=10)
+        self.learningRate=tk.StringVar(value=0.01)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.convergenceMinimumValue=tk.StringVar(value=1e-6)
         self.convergenceWindowSize=tk.StringVar(value=20)
 
@@ -37,7 +37,7 @@ class StepGradientData:
 
 class LBFGSBData:
     def __init__(self) -> None:
-        self.numberOfIterations=tk.StringVar(value=10)
+        self.numberOfIterations=tk.StringVar(value=50)
         self.gradientConvergenceTolerance = tk.StringVar(value="1e-5")
 
 
@@ -152,19 +152,7 @@ class App():
 
                 fig, ax = plt.subplots(figsize=(20, 12))
                 img = chess_result[int(IDX), :, :]
-                # img=Image.fromarray(img).convert('L')
                 plt.imshow(img, cmap='gray_r')
-
-                # itk_image = sitk.ReadImage(self.moving_image, sitk.sitkFloat32)
-                # self.display = gui.MultiImageDisplay(
-                #     image_list=[
-                #         sitk.CheckerBoard(fixed, itk_image, [11, 8, 4]),
-                #         sitk.CheckerBoard(fixed, moving, (11, 8, 4))
-                #     ],
-                #     title_list=['before', 'after'],
-                #     figure_size=(13, 5),
-                # )
-                # fig = self.display.fig
                 canvas_figure = FigureCanvasTkAgg(fig, master=self.chess_frame)
                 canvas_figure.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -179,17 +167,12 @@ class App():
 
             self.chess = chess_result
 
-            
-
-
 
     def update_result_image(self, number, chess_result=None):
         #self.image = ImageTk.PhotoImage(Image.open(os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number)))
         print(number, os.path.abspath(os.getcwd())+"/output/iteration{0}.jpg".format(number))
         
         #self.result_label.configure(image=self.image, text='iteration: '+str(number), compound='top')
-
-    # fixed/moving mhd photo
 
 
     def calculate_distance(self, point_1, point_2):
