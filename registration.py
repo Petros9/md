@@ -303,8 +303,8 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
     
     final_transform = registration_method.Execute(fixed_image, moving_image)
     # final_transform = sitk.CompositeTransform([nonrigid_transform, final_transform])
-    final_transform = sitk.CompositeTransform(final_transform) #second done 
-    final_transform.AddTransform(nonrigid_transform) #first done
+    # final_transform = sitk.CompositeTransform(final_transform) #second done 
+    # final_transform.AddTransform(nonrigid_transform) #first done
     
     # if second_step == 'deamons':
     #     final_transform = sitk.DisplacementFieldTransform(final_transform)

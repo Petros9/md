@@ -51,7 +51,7 @@ class App():
         self.interpolation = tk.StringVar(value=registration.interpolation_options[0])
         self.sampling_percentage = tk.StringVar(value='0.01')
         self.sampling_strategy = tk.StringVar(value=registration.sampling_strategies[0])
-        self.bins = tk.IntVar(value=30)
+        self.bins = tk.IntVar(value=50)
         self.optimizer = tk.StringVar(value=registration.optimizers[0])
         self.opt_frame_list = None
         self.transform_file = tk.StringVar(value='(transform file is optional)')
