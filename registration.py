@@ -76,20 +76,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     moving_transformed = sitk.Resample(moving, fixed, transform,
                                        sitk.sitkLinear, 0.0, 
                                        moving_image.GetPixelIDValue())
-    # extract the central slice in xy, xz, yz and alpha blend them
-    # combined = [fixed[:, :, central_indexes[2]] + -
-    # moving_transformed[:, :, central_indexes[2]],
-    #             fixed[:, central_indexes[1], :] + -
-    #             moving_transformed[:, central_indexes[1], :],
-    #             fixed[central_indexes[0], :, :] + -
-    #             moving_transformed[central_indexes[0], :, :]]
 
-    # combined = [(1.0 - alpha)*fixed[:,:,central_indexes[2]] + \
-    #                alpha*moving_transformed[:,:,central_indexes[2]],
-    #               (1.0 - alpha)*fixed[:,central_indexes[1],:] + \
-    #               alpha*moving_transformed[:,central_indexes[1],:],
-    #               (1.0 - alpha)*fixed[central_indexes[0],:,:] + \
-    #               alpha*moving_transformed[central_indexes[0],:,:]]
     
     combined = [fixed[:, :, central_indexes[2]] + -
     moving_transformed[:, :, central_indexes[2]],
@@ -127,9 +114,7 @@ def save_combined_central_slice(fixed, moving, transform, file_name_prefix, movi
     next_image_number = format(iteration_number, '03d')
     
     gui.update_result_image(next_image_number)
-    #if iteration_number == 0 or iteration_number > int(getattr(opt_data, 'numberOfIterations').get()) - 2:
-    #    gui.show_chess(fixed, moving_transformed)
-    
+
     iteration_number += 1
     return moving_transformed
     
@@ -146,11 +131,6 @@ def register(fixed_image_name, moving_image_name, gui, interpolation_method, sam
                         sampling_strategy, bins, optimalizer, opt_data, transform_file, second_step))
     final_transform = new_thread.start()
 
-    # registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method,sampling_percent,
-    #                     sampling_strategy, bins, optimalizer, opt_data, transform_file, second_step)
-    # print(results)
-    # return 
-   
 
 
 def registration_computation(fixed_image_name, moving_image_name, gui, interpolation_method, 
@@ -240,52 +220,32 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
                                                 transformDomainMeshSize = mesh_size, order=3)
         print(f"Initial Number of Parameters: {transform2.GetNumberOfParameters()}")
 
-        # R = sitk.ImageRegistrationMethod()
-        # R.SetMetricAsMattesMutualInformation(50)
-        
-        # R.SetOptimizerAsGradientDescentLineSearch(
-        #     5.0, 100, convergenceMinimumValue=1e-4, convergenceWindowSize=5
-        # )
 
-        # R.SetInterpolator(sitk.sitkLinear)
-
-
-        # compo_transform.AddTransform(transform2)
         registration_method.SetMovingInitialTransform(nonrigid_transform)
         registration_method.SetInitialTransformAsBSpline(transform2, inPlace=True, scaleFactors=[1, 2, 5])
-        # combined_transform = compo_transform       
 
     elif second_step=='daemons':
         print('deamons')
-        # registration_method = sitk.ImageRegistrationMethod()
         transform_to_displacment_field_filter = sitk.TransformToDisplacementFieldFilter()
         transform_to_displacment_field_filter.SetReferenceImage(fixed_image)
         transform2 = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter.Execute(sitk.Transform()))
 
-        # nonrigid_transform = sitk.TransformToDisplacementField(nonrigid_transform)
         transform_to_displacment_field_filter2 = sitk.TransformToDisplacementFieldFilter()
         transform_to_displacment_field_filter2.SetReferenceImage(fixed_image)
         nonrigid_transform = sitk.DisplacementFieldTransform(transform_to_displacment_field_filter2.Execute(nonrigid_transform))
 
 
-        # initial_transform = sitk.DisplacementFieldTransform(final_transform)
         transform2.SetSmoothingGaussianOnUpdate(
             varianceForUpdateField=1.75, varianceForTotalField=0.5)
 
-        # registration_method.SetInitialTransform(transform)
         registration_method.SetMovingInitialTransform(nonrigid_transform)
         registration_method.SetMetricAsDemons(0.001)
         registration_method.SetInitialTransform(transform2, inPlace=True)
-        # combined_transform = transform2
 
 
     compo_transform = sitk.CompositeTransform(transform2) #second done 
     compo_transform.AddTransform(nonrigid_transform) #first done
    
-    # if second_step == 'BSpline':
-    #     registration_method.SetInitialTransformAsBSpline(compo_transform, scaleFactors=[1, 2, 5])
-    # else:
-    #     registration_method.SetInitialTransform(compo_transform)
 
     registration_method.SetNumberOfThreads(16)
     registration_method.SetShrinkFactorsPerLevel([4, 2, 1])
@@ -302,12 +262,6 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
     
     final_transform = registration_method.Execute(fixed_image, moving_image)
-    # final_transform = sitk.CompositeTransform([nonrigid_transform, final_transform])
-    # final_transform = sitk.CompositeTransform(final_transform) #second done 
-    # final_transform.AddTransform(nonrigid_transform) #first done
-    
-    # if second_step == 'deamons':
-    #     final_transform = sitk.DisplacementFieldTransform(final_transform)
 
     new_moving = save_combined_central_slice(fixed_image,moving_image,final_transform,'output/iteration', moving_image,
                                      registration_method, gui, opt_data)
@@ -315,8 +269,6 @@ def registration_computation(fixed_image_name, moving_image_name, gui, interpola
 
 
     print('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
-    # gui.set_results_text('Optimizer\'s stopping condition, {0}'.format(registration_method.GetOptimizerStopConditionDescription()))
-    # print("Metric value after  registration: ", registration_method.GetMetricValue())
 
     x = [x for x in range(iteration_number)]
     y =  results
